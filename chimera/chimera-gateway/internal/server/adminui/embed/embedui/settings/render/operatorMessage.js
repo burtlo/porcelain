@@ -77,9 +77,9 @@
     er = er.replace(/\s*\.\s*\./g, ".");
     er = er.replace(/\s+/g, " ").trim();
     if (er.length > 200) er = er.slice(0, 199) + "…";
-    if (opts.modelNotFound && er.indexOf("Check virtual model fallback chain") < 0) {
+    if (opts.modelNotFound && er.indexOf("Check Assistant fallback chain") < 0) {
       er = er.replace(/\.$/, "");
-      er += ". Check virtual model fallback chain in routing policy.";
+      er += ". Check Assistant fallback chain in routing policy.";
     }
     return er;
   }
@@ -184,19 +184,19 @@
     return Derive.resolveRagWorkspaceLabel(coords.tenantId, coords.projectId, coords.flavorId);
   }
 
-  function virtualModelIdFromMetaOrFlat(flat, meta) {
-    if (flat.virtualModelId != null && String(flat.virtualModelId).trim() !== "") {
-      return String(flat.virtualModelId).trim();
+  function assistantIdFromMetaOrFlat(flat, meta) {
+    if (flat.assistantId != null && String(flat.assistantId).trim() !== "") {
+      return String(flat.assistantId).trim();
     }
-    if (flat.virtual_model_id != null && String(flat.virtual_model_id).trim() !== "") {
-      return String(flat.virtual_model_id).trim();
+    if (flat.assistant_id != null && String(flat.assistant_id).trim() !== "") {
+      return String(flat.assistant_id).trim();
     }
-    if (meta && meta.routingSummary && meta.routingSummary.virtualModelId) {
-      return meta.routingSummary.virtualModelId;
+    if (meta && meta.routingSummary && meta.routingSummary.assistantId) {
+      return meta.routingSummary.assistantId;
     }
     var cache = globalThis.gatewayOverviewCache;
-    if (cache && cache.virtual_model_id != null && String(cache.virtual_model_id).trim() !== "") {
-      return String(cache.virtual_model_id).trim();
+    if (cache && cache.assistant_id != null && String(cache.assistant_id).trim() !== "") {
+      return String(cache.assistant_id).trim();
     }
     return "";
   }
@@ -207,7 +207,7 @@
     var client = flat.clientModel != null ? String(flat.clientModel).trim() : rs && rs.clientModel ? rs.clientModel : "";
     var upstream = flat.upstreamModel != null ? String(flat.upstreamModel).trim() : rs && rs.upstream ? rs.upstream : "";
     var chain = flat.chainLen != null ? Number(flat.chainLen) : rs ? Number(rs.chainLen) : NaN;
-    var virtualId = virtualModelIdFromMetaOrFlat(flat, meta);
+    var virtualId = assistantIdFromMetaOrFlat(flat, meta);
     if (client && virtualId && client !== virtualId && client === upstream) return true;
     if (!isNaN(chain) && chain <= 1 && client && upstream && client === upstream) return true;
     return false;
@@ -421,15 +421,15 @@
       var est = flat.outgoingTokens != null ? Number(flat.outgoingTokens) : flat.outgoing_tokens != null ? Number(flat.outgoing_tokens) : rs && !isNaN(Number(rs.outgoingTokens)) ? Number(rs.outgoingTokens) : NaN;
 
       if (isRoutingPassthrough(flat, meta)) {
-        var passBits = ["Client model used as-is (not a configured virtual model)"];
+        var passBits = ["Client model used as-is (not a configured Assistant)"];
         if (client || upstream) passBits.push("sent `" + (client || upstream) + "` to provider");
         var estPass = formatEstInputTokens(est);
         if (estPass) passBits.push(estPass);
         return passBits.join(" · ") + ".";
       }
 
-      var virtualId = virtualModelIdFromMetaOrFlat(flat, meta) || client;
-      var partsR = ["Routed virtual model " + virtualId + " → " + (upstream || "?")];
+      var virtualId = assistantIdFromMetaOrFlat(flat, meta) || client;
+      var partsR = ["Routed Assistant " + virtualId + " → " + (upstream || "?")];
       if (!isNaN(att) && !isNaN(chain) && chain > 0) {
         partsR.push("attempt " + Math.round(att) + " of " + Math.round(chain));
       }
@@ -576,9 +576,9 @@
       var chainLabel = "fallback chain";
       if (source === "gateway.fallback_chain") {
         chainLabel = "gateway fallback chain";
-      } else if (source.indexOf("virtual_model:") === 0) {
-        var vmId = source.slice("virtual_model:".length).trim();
-        chainLabel = vmId ? vmId + " virtual model fallback chain" : "virtual model fallback chain";
+      } else if (source.indexOf("assistant:") === 0) {
+        var vmId = source.slice("assistant:".length).trim();
+        chainLabel = vmId ? vmId + " Assistant fallback chain" : "Assistant fallback chain";
       }
       var tenant = flat.tenant_id != null ? String(flat.tenant_id).trim() : "";
       var tenantBit = tenant ? " · tenant " + tenant : "";

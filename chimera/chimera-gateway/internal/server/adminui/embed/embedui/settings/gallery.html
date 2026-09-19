@@ -21,17 +21,17 @@
     <a href="#sg-uo-users">Users &amp; tokens</a><span class="styleguide-nav-sep">·</span>
     <a href="#sg-uo-providers">Providers</a><span class="styleguide-nav-sep">·</span>
     <a href="#sg-uo-workspaces">Workspaces</a><span class="styleguide-nav-sep">·</span>
-    <a href="#sg-uo-virtual-models">Virtual models</a>
+    <a href="#sg-uo-assistants">Assistants</a>
   </nav>
 
   <header class="styleguide-hero">
     <h1 id="sg-unified-operator">Unified operator view (draft)</h1>
     <p>
       Prototypes for operator cards above the log stream. Card bodies under <strong>Providers</strong>,
-      <strong>Workspaces</strong>, and <strong>Virtual models</strong> are rendered by
+      <strong>Workspaces</strong>, and <strong>Assistants</strong> are rendered by
       <code>gallery/gallery-card-fixtures.js</code> using the same modules as <code>/ui/settings</code>
       (<code>render/cards/*</code>, <code>embedui/shared/*</code>). Users and scoped-log demos still use gallery-only scripts.
-      Per-VM routing, fallback, and tool-router sections live on virtual model cards (global routing cards were removed from the live feed).
+      Per-assistant routing, fallback, and tool-router sections live on Assistant cards (global routing cards were removed from the live feed).
     </p>
   </header>
 
@@ -59,7 +59,7 @@
 
       <div id="sg-uo-overview" class="sum-section-label" style="scroll-margin-top:3.25rem">Overview (Main parity)</div>
       <p class="styleguide-sub" style="margin-top:0.15rem">
-        Gateway version + virtual model; composite health + per-service rows (chimera-broker, chimera-vectorstore when RAG on, indexer
+        Gateway version + Assistant; composite health + per-service rows (chimera-broker, chimera-vectorstore when RAG on, indexer
         when supervised).
       </p>
       <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
@@ -223,15 +223,15 @@
         <div id="gallery-fixture-indexer-stale" style="margin-top:0.5rem" aria-live="polite"></div>
       </div>
 
-      <div id="sg-uo-virtual-models" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Virtual models</div>
+      <div id="sg-uo-assistants" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Assistants</div>
       <p class="styleguide-sub" style="margin-top:0.15rem">
-        Per-VM identity, fallback chain, routing policy YAML, and tool-router sections from
-        <code>adminVirtualModels.js</code> (replaces legacy global routing cards on the live feed).
+        Per-assistant identity, fallback chain, routing policy YAML, and tool-router sections from
+        <code>adminAssistants.js</code> (replaces legacy global routing cards on the live feed).
       </p>
       <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
-        <li><code>virtual-model.summary</code> · <code>virtual-model.client-usage</code> · <code>virtual-model.identity</code> · <code>virtual-model.fallback</code> · <code>virtual-model.routing</code> · <code>virtual-model.tool-router</code> · <code>virtual-model.scoped-evlog</code></li>
+        <li><code>assistant.summary</code> · <code>assistant.client-usage</code> · <code>assistant.identity</code> · <code>assistant.fallback</code> · <code>assistant.routing</code> · <code>assistant.tool-router</code> · <code>assistant.scoped-evlog</code></li>
       </ul>
-      <div id="gallery-fixture-virtual-model" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <div id="gallery-fixture-assistant" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
 
     </section>
   </div>
@@ -260,7 +260,7 @@
   <script src="/ui/assets/settings/render/cards/adminShared.js" defer></script>
   <script src="/ui/assets/settings/render/cards/adminUsers.js" defer></script>
   <script src="/ui/assets/settings/render/cards/adminProvider.js" defer></script>
-  <script src="/ui/assets/settings/render/cards/adminVirtualModels.js" defer></script>
+  <script src="/ui/assets/settings/render/cards/adminAssistants.js" defer></script>
   <script src="/ui/assets/settings/render/cards/workspaceDraft.js" defer></script>
   <script src="/ui/assets/settings/render/cards/feedLogConv.js" defer></script>
   <script src="/ui/assets/settings/render/cards/serviceFeed/registry.js" defer></script>

@@ -3,28 +3,28 @@
 | Field | Value |
 |-------|-------|
 | **Doc kind** | `feature-record` |
-| **Areas** | Gateway embed UI, chat/RAG metadata, virtual models |
+| **Areas** | Gateway embed UI, chat/RAG metadata, assistants |
 | **Status** | `current` |
 | **Introduced** | Gateway operator shell v0.2 train |
 | **Originated from** | [`plans/operator-chat-ui.md`](../plans/operator-chat-ui.md) |
-| **Related features** | [Operator left navigation ribbon](operator-left-navigation-ribbon.md), [Operator conversation history](operator-conversation-history.md), [Operator virtual models](operator-virtual-models.md), [Indexer workspaces](indexer-workspaces.md) |
+| **Related features** | [Operator left navigation ribbon](operator-left-navigation-ribbon.md), [Operator conversation history](operator-conversation-history.md), [Operator assistants](operator-assistants.md), [Indexer workspaces](indexer-workspaces.md) |
 | **Depends on** | [Operator UI session auth](operator-ui-session-auth.md), `GET /v1/models`, `POST /v1/chat/completions`, [Gateway RAG](gateway-rag-ingest-and-retrieval.md), indexer workspaces API |
 | **Last updated** | See git history |
 
 ## At a glance
 
-Operators exercise gateway chat from `/ui/chat` (iframe inside the app shell at `/ui`). The page streams assistant replies, lets them pick a virtual or upstream model and an optional indexer workspace for RAG scope, and shows per-turn metadata: resolved upstream model, expandable workspace retrieval snippets with syntax highlighting, and inline errors with **Retry**. Messages render with design-01 styling; assistant text uses a safe Markdown subset. Per-message **Copy** is available on all roles; full-thread Markdown export exists in code but is not exposed in the ribbon shell (see gaps).
+Operators exercise gateway chat from `/ui/chat` (iframe inside the app shell at `/ui`). The page streams assistant replies, lets them pick an assistant or upstream model and an optional indexer workspace for RAG scope, and shows per-turn metadata: resolved upstream model, expandable workspace retrieval snippets with syntax highlighting, and inline errors with **Retry**. Messages render with design-01 styling; assistant text uses a safe Markdown subset. Per-message **Copy** is available on all roles; full-thread Markdown export exists in code but is not exposed in the ribbon shell (see gaps).
 
 ## Operator-visible behavior
 
 - **Layout** — Viewport of chronological message cards; Cursor-style composer (textarea above controls; model and workspace selectors on the bottom row; send on the right).
-- **Model selector** — Populated from `GET /v1/models` (includes enabled virtual models). Changing model does not clear the thread.
+- **Model selector** — Populated from `GET /v1/models` (includes enabled assistants). Changing model does not clear the thread.
 - **Workspace selector** — Populated from `GET /api/ui/indexer/workspaces`; **Default** sends no scope headers; otherwise `X-Chimera-Project` / `X-Chimera-Flavor-Id` on chat requests. Switching workspace does not reset the thread.
 - **Streaming** — Token/chunk updates while generating; smart scroll follows only when the viewport is already at the bottom.
 - **Keyboard** — **Enter** sends, **Shift+Enter** newline, **Escape** blurs input, **↑** recalls prior user messages when the composer is empty.
 - **Errors** — Failed turns render as error blocks with **Retry** (resends stored user text).
 - **RAG snippets** — Expandable blocks under assistant messages; show source path, relevance score, and highlighted code or Markdown from `X-Chimera-RAG-Hits` (base64 JSON header).
-- **Resolved model** — Message header shows upstream model id when the gateway resolved a virtual model to a concrete provider model.
+- **Resolved model** — Message header shows upstream model id when the gateway resolved an assistant to a concrete provider model.
 - **Title bar** — Editable conversation title when a saved thread is open (persists via conversation history API).
 - **New chat** — Clears in-memory messages and assigns a new `conversation_id`; does not delete SQLite history rows.
 - **Shell integration** — Ribbon posts `chimera-chat-action` messages for **new** and **open**; chat posts `chimera-chat-state` to refresh or highlight history.
@@ -60,7 +60,7 @@ Operators exercise gateway chat from `/ui/chat` (iframe inside the app shell at 
 |---------|--------|
 | `GET /ui/chat` | Chat page (iframe) |
 | `GET /api/ui/tokens` | Bearer token for `/v1/models` and chat |
-| `GET /v1/models` | Model catalog (virtual + available upstream) |
+| `GET /v1/models` | Model catalog (assistants + available upstream) |
 | `GET /api/ui/indexer/workspaces` | Workspace list for selector |
 | `POST /v1/chat/completions` | Chat (stream and non-stream) |
 | Header | `X-Chimera-Conversation-Id` — thread id |
@@ -80,7 +80,7 @@ Operators exercise gateway chat from `/ui/chat` (iframe inside the app shell at 
 | Rendering | `embed/embedui/chat/render/messages.js`, `input.js`, `markdown.js`, `snippet.js`, `titleBar.js` |
 | History load | `embed/embedui/chat/historyClient.js` |
 | Routes | `embed/routes.go` — `/ui/chat`, `/ui/assets/chat/` |
-| Chat + persistence hooks | `internal/server/server.go`, `virtualmodel_chat.go` |
+| Chat + persistence hooks | `internal/server/server.go`, `assistant_chat.go` |
 | Tests | `embedui_test/chat_history_test.go`, related HTML tests |
 
 ## Verification

@@ -225,7 +225,7 @@
         if (wr === false) bitsFb.push("no retry");
         return bitsFb.join(" · ");
       }
-      if (msg === "chat.routing.attempt" || ml === "virtual model fallback attempt") {
+      if (msg === "chat.routing.attempt" || ml === "assistant fallback attempt") {
         var bitsVa = ["Routing attempt"];
         var modVa = brokerShortTailModel(flat.upstreamModel);
         if (modVa) bitsVa.push(modVa);
@@ -234,7 +234,7 @@
         if (!isNaN(att) && !isNaN(chain) && chain > 0) bitsVa.push("attempt " + att + "/" + chain);
         return bitsVa.join(" · ");
       }
-      if (msg === "chat.routing.resolved" || ml === "virtual model routing resolved") {
+      if (msg === "chat.routing.resolved" || ml === "assistant routing resolved") {
         var bitsVr = ["Routing resolved"];
         var modVr = brokerShortTailModel(flat.upstreamModel);
         if (modVr) bitsVr.push(modVr);
@@ -502,8 +502,8 @@
       msg === "chat.routing.attempt" ||
       msg === "chat.routing.resolved" ||
       msg === "chat.provider_limits.blocked" ||
-      ml === "virtual model fallback attempt" ||
-      ml === "virtual model routing resolved" ||
+      ml === "assistant fallback attempt" ||
+      ml === "assistant routing resolved" ||
       ml === "chat blocked by provider limits" ||
       ml === "skipping upstream model (provider limits)"
     );

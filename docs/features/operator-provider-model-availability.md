@@ -3,17 +3,17 @@
 | Field | Value |
 |-------|-------|
 | **Doc kind** | `feature-record` |
-| **Areas** | Gateway catalog, operator SQLite, settings provider cards, virtual models |
+| **Areas** | Gateway catalog, operator SQLite, settings provider cards, assistants |
 | **Status** | `current` |
-| **Introduced** | Gateway minor after virtual models baseline |
+| **Introduced** | Gateway minor after assistants baseline |
 | **Originated from** | [`plans/provider-model-availability.md`](../plans/provider-model-availability.md) |
-| **Related features** | [Operator settings UI](operator-settings-ui.md), [Operator virtual models](operator-virtual-models.md), [Operator chat UI](operator-chat-ui.md) |
+| **Related features** | [Operator settings UI](operator-settings-ui.md), [Operator assistants](operator-assistants.md), [Operator chat UI](operator-chat-ui.md) |
 | **Depends on** | Broker catalog snapshot, operator SQLite, UI session tenant |
 | **Last updated** | See git history |
 
 ## At a glance
 
-Each operator tenant can mark individual broker-reported upstream models **available** or **unavailable** in operator SQLite. The gateway filters `GET /v1/models`, virtual-model **Generate from catalog**, and runtime fallback chains to **available** models only; skipped unavailable entries emit scoped warnings. Provider cards on `/ui/settings` expose **Configure** edit mode with per-model toggles and a **Apply free tier** assist (Groq/Gemini) seeded from `config/provider-free-tier.yaml`. New broker models default to **available** when no row exists.
+Each operator tenant can mark individual broker-reported upstream models **available** or **unavailable** in operator SQLite. The gateway filters `GET /v1/models`, assistant **Generate from catalog**, and runtime fallback chains to **available** models only; skipped unavailable entries emit scoped warnings. Provider cards on `/ui/settings` expose **Configure** edit mode with per-model toggles and a **Apply free tier** assist (Groq/Gemini) seeded from `config/provider-free-tier.yaml`. New broker models default to **available** when no row exists.
 
 ## Operator-visible behavior
 
@@ -21,7 +21,7 @@ Each operator tenant can mark individual broker-reported upstream models **avail
 - **Configure** — Enters edit mode on a provider card; toggles per model id; **Save** / **Cancel**.
 - **Apply free tier** (Groq/Gemini) — Sets availability from YAML allowlist intersection; **Ollama** button is no-op (all local models treated available).
 - **Chat model list** — Unavailable models disappear from `/v1/models` for the tenant.
-- **Virtual model warnings** — VM detail API returns `fallback_unavailable` when saved chain references unavailable ids; runtime skips them with log warnings.
+- **Assistant warnings** — Assistant detail API returns `fallback_unavailable` when saved chain references unavailable ids; runtime skips them with log warnings.
 
 ## System behavior and contracts
 
@@ -68,8 +68,8 @@ Each operator tenant can mark individual broker-reported upstream models **avail
 | UI API | `internal/server/adminui/api/providers/provider_models.go` |
 | Catalog filter | `internal/server/catalog/availablemodels.go`, `handleV1Models` |
 | Settings UI | `embed/embedui/settings/handlers/admin.js`, provider card renderers |
-| VM integration | `api/virtualmodels/handlers.go` (`fallback_unavailable`), chat fallback loop |
-| Tests | `ui_virtual_model_generate_test.go`, provider handler tests |
+| Assistant integration | `api/assistants/handlers.go` (`fallback_unavailable`), chat fallback loop |
+| Tests | `ui_virtual_model_generate_test.go`, `ui_assistants_http_test.go`, provider handler tests |
 
 ## Verification
 
@@ -78,7 +78,7 @@ go test ./chimera/chimera-gateway/internal/server/ -run ProviderModel
 go test ./chimera/chimera-gateway/internal/operatorstore/ -run ProviderModel
 ```
 
-Manual: mark a fallback-chain model unavailable; confirm it disappears from chat models and VM card shows warning; chat still succeeds via next fallback entry.
+Manual: mark a fallback-chain model unavailable; confirm it disappears from chat models and assistant card shows warning; chat still succeeds via next fallback entry.
 
 ## Out of scope and known gaps
 
@@ -90,5 +90,5 @@ Manual: mark a fallback-chain model unavailable; confirm it disappears from chat
 ## References
 
 - Plan: [`plans/provider-model-availability.md`](../plans/provider-model-availability.md)
-- Virtual models: [Operator virtual models](operator-virtual-models.md)
+- Assistants: [Operator assistants](operator-assistants.md)
 - Free-tier YAML: [`config/provider-free-tier.yaml`](../../config/provider-free-tier.yaml)

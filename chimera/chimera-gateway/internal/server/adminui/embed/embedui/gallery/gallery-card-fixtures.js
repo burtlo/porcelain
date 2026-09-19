@@ -58,7 +58,7 @@
           }
         },
         gateway: {
-          virtual_models: [
+          assistants: [
             {
               id: 42,
               model_id: "Chimera-0.2.0",
@@ -83,7 +83,7 @@
         day_rollups: [{ provider: "groq", model_id: "groq/free", calls: 12, status: 200 }]
       },
       gatewayOverviewCache: {
-        virtual_model_id: "virtual/claude-opus-proxy",
+        assistant_id: "virtual/claude-opus-proxy",
         service_overview: {
           refreshed_at: new Date().toISOString(),
           services: {
@@ -95,9 +95,9 @@
       },
       tokenListCache: [{ tenant_id: "tenant-a", label: "Gallery", index: 0 }],
       tokenLabelByTenant: { "tenant-a": "Gallery" },
-      virtualModelDrafts: [],
-      virtualModelUi: { "42": { panelOpen: true, hydrated: true } },
-      virtualModelDetails: {
+      assistantDrafts: [],
+      assistantUi: { "42": { panelOpen: true, hydrated: true } },
+      assistantDetails: {
         "42": {
           fallback_chain: ["groq/free"],
           fallback_unavailable: [],
@@ -181,14 +181,14 @@
     if (ctx.workspaceDrafts && ctx.workspaceDrafts.length && typeof ctx.buildWorkspaceDraftCardHtml === "function") {
       setHtml("gallery-fixture-workspace-draft", ctx.buildWorkspaceDraftCardHtml(ctx.workspaceDrafts[0]));
     }
-    var vmList =
+    var assistantList =
       ctx.adminStateCache &&
       ctx.adminStateCache.gateway &&
-      Array.isArray(ctx.adminStateCache.gateway.virtual_models)
-        ? ctx.adminStateCache.gateway.virtual_models
+      Array.isArray(ctx.adminStateCache.gateway.assistants)
+        ? ctx.adminStateCache.gateway.assistants
         : [];
-    if (vmList.length && typeof ctx.buildVirtualModelCardHtml === "function") {
-      setHtml("gallery-fixture-virtual-model", ctx.buildVirtualModelCardHtml(vmList[0]));
+    if (assistantList.length && typeof ctx.buildAssistantCardHtml === "function") {
+      setHtml("gallery-fixture-assistant", ctx.buildAssistantCardHtml(assistantList[0]));
     }
     if (
       ctx.lastIndexerOperatorWorkspacesNested &&

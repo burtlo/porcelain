@@ -40,7 +40,7 @@ When `rag.enabled` is true, the gateway runs a shared **RAG service** that chunk
 | Whole vs session ingest | Below `max_whole_file_bytes` → `POST /v1/ingest`; above → session API with ordered chunks |
 | Default chunking | 512 chars / 128 overlap when unset |
 | Default top_k | 8 at retrieve unless overridden |
-| Per-VM RAG | Not scoped per virtual model in v1 — gateway-global when enabled |
+| Per-assistant RAG | Not scoped per assistant in v1 — gateway-global when enabled |
 
 ## Interfaces
 
@@ -68,7 +68,7 @@ When `rag.enabled` is true, the gateway runs a shared **RAG service** that chunk
 | Vector store | `internal/vectorstore/` |
 | Ingest HTTP handlers | `internal/server/` (ingest routes in `server.go`) |
 | Indexer-facing RAG API | `internal/server/indexerapi/` |
-| Chat retrieval wiring | `internal/server/virtualmodel_chat.go` |
+| Chat retrieval wiring | `internal/server/assistant_chat.go` |
 
 ## Verification
 
@@ -90,7 +90,7 @@ Manual: ingest a file via indexer or `POST /v1/ingest`, chat with matching proje
 
 - `X-Chimera-RAG-Hits` and `FormatRetrievedContext` include line ranges; chat UI gutter shipped ([`indexer-manifest-ingest`](../plans/indexer-manifest-ingest.md) Phases 4–5).
 - Indexer `POST /v1/indexer/read-segment` (live file bytes) — deferred; expansion uses Qdrant + segment index only.
-- Per-virtual-model RAG scope — deferred (see [virtual models](operator-virtual-models.md)).
+- Per-assistant RAG scope — deferred (see [assistants](operator-assistants.md)).
 
 ## References
 

@@ -28,8 +28,8 @@ globalThis.ChimeraSettings.Main = function () {
   var pollTimer = null;
   var adminUserDrafts = [];
   var nextAdminUserDraftId = 1;
-  var virtualModelDrafts = [];
-  var nextVirtualModelDraftId = 1;
+  var assistantDrafts = [];
+  var nextAssistantDraftId = 1;
   /** In-flight provider API key inputs keyed by provider id; survives summarized panel rebuild. */
   var adminProviderKeyDraft = {};
   /** Provider ids shown as summarized admin-provider-* cards (seeded from catalog configured_ids). */
@@ -116,8 +116,8 @@ globalThis.ChimeraSettings.Main = function () {
       msg === "chat.routing.resolved" ||
       msg === "chat.routing.fallback" ||
       msg === "chat.provider_limits.blocked" ||
-      msg.indexOf("virtual model fallback attempt") >= 0 ||
-      msg.indexOf("virtual model routing resolved") >= 0
+      msg.indexOf("Assistant fallback attempt") >= 0 ||
+      msg.indexOf("Assistant routing resolved") >= 0
     )
       return "chat.routing";
     if (msg.indexOf("rag.") === 0) return "rag";
@@ -767,8 +767,8 @@ globalThis.ChimeraSettings.Main = function () {
     workspaceManagedFolderPickerOpen: workspaceManagedFolderPickerOpen,
     adminUserDrafts: adminUserDrafts,
     nextAdminUserDraftId: nextAdminUserDraftId,
-    virtualModelDrafts: virtualModelDrafts,
-    nextVirtualModelDraftId: nextVirtualModelDraftId,
+    assistantDrafts: assistantDrafts,
+    nextAssistantDraftId: nextAssistantDraftId,
     adminProviderKeyDraft: adminProviderKeyDraft,
     adminVisibleProviderIds: adminVisibleProviderIds,
     adminProviderCatalog: adminProviderCatalog,
@@ -780,8 +780,8 @@ globalThis.ChimeraSettings.Main = function () {
     adminProviderModelsDraft: adminProviderModelsDraft,
     adminProviderModelsCache: adminProviderModelsCache,
     adminProviderModelsShowUnavailable: adminProviderModelsShowUnavailable,
-    virtualModelDetails: {},
-    virtualModelUi: {},
+    assistantDetails: {},
+    assistantUi: {},
     storyRebuildTimer: null,
     sumEvlogUiDeferTimer: null,
     sumEvlogPointerSuppressedUntil: 0

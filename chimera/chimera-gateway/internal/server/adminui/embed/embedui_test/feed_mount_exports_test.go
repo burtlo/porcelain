@@ -38,7 +38,7 @@ var requiredCtxExportsAfterCardMount = []string{
 	"hydrateIndexerServiceSummaryFromApi",
 	"buildGatewayOverviewCardHtml",
 	"buildAdminProviderCardHtml",
-	"buildVirtualModelCardHtml",
+	"buildAssistantCardHtml",
 	"conversationCardModelForGroup",
 	"conversationCardStatus",
 	"buildAdminProvidersSectionBreakHtml",

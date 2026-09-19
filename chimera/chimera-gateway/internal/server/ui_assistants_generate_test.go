@@ -17,7 +17,7 @@ import (
 	"github.com/lynn/porcelain/internal/naming"
 )
 
-func TestUIVirtualModelGenerate_filtersBySessionTenantAvailability(t *testing.T) {
+func TestUIAssistantsGenerate_filtersBySessionTenantAvailability(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 
 	broker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func TestUIVirtualModelGenerate_filtersBySessionTenantAvailability(t *testing.T)
 	t.Cleanup(front.Close)
 	client := vmTestLoginClient(t, front.URL, "gw-vm-gen")
 
-	genRes, err := client.Post(front.URL+"/api/ui/virtual-models/1/routing/generate", "application/json", strings.NewReader(`{"save":false}`))
+	genRes, err := client.Post(front.URL+"/api/ui/assistants/1/routing/generate", "application/json", strings.NewReader(`{"save":false}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestUIVirtualModelGenerate_filtersBySessionTenantAvailability(t *testing.T)
 	}
 }
 
-func TestUIVirtualModelGet_reportsFallbackUnavailable(t *testing.T) {
+func TestUIAssistantsGet_reportsFallbackUnavailable(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 
 	broker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +134,7 @@ func TestUIVirtualModelGet_reportsFallbackUnavailable(t *testing.T) {
 	t.Cleanup(front.Close)
 	client := vmTestLoginClient(t, front.URL, "gw-vm-get")
 
-	getRes, err := client.Get(front.URL + "/api/ui/virtual-models/1")
+	getRes, err := client.Get(front.URL + "/api/ui/assistants/1")
 	if err != nil {
 		t.Fatal(err)
 	}

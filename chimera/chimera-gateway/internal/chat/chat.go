@@ -570,8 +570,8 @@ type ProxyOpts struct {
 	WitnessPayloadSampleMaxRunes int
 	// ModelAvailable reports whether an upstream model id is operator-marked available; nil allows all.
 	ModelAvailable func(upstreamModel string) bool
-	// VirtualModelID scopes routing.model.unavailable_skipped logs to a virtual model.
-	VirtualModelID string
+	// AssistantID scopes routing.model.unavailable_skipped logs to an assistant.
+	AssistantID string
 }
 
 func notifyResponseCaptured(opts *ProxyOpts, statusCode int, upstreamModel string, stream bool, body []byte) {
@@ -1154,7 +1154,7 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 	for i, upstreamModel := range chain {
 		if _, skip := excluded413[upstreamModel]; skip {
 			if log != nil {
-				log.Debug("virtual model skipping model (413 earlier this request)", "msg", "chat.routing.virtual_model_skipped", "upstreamModel", upstreamModel, "index", i)
+				log.Debug("assistant skipping model (413 earlier this request)", "msg", naming.MsgChatRoutingAssistantSkipped, "upstreamModel", upstreamModel, "index", i)
 			}
 			continue
 		}
@@ -1174,8 +1174,8 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 						"index", i + 1,
 						"chainLen", len(chain),
 					}
-					if opts.VirtualModelID != "" {
-						logArgs = append(logArgs, "virtual_model_id", opts.VirtualModelID)
+					if opts.AssistantID != "" {
+						logArgs = append(logArgs, "assistant_id", opts.AssistantID)
 					}
 					log.Warn("skipping upstream model (operator unavailable)", logArgs...)
 				}

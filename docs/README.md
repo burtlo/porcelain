@@ -15,7 +15,7 @@ docs/
 └── reference/             stable integration references (BiFrost, …)
 ```
 
-Current release line: **v0.2.x+** with RAG, workspace indexer, operator `/ui/*`, virtual models, and `chimera-supervisor` wrapper stack. Patch history: [version-v0.2.md — Shipped releases](version-v0.2.md#shipped-releases-v020-through-v022).
+Current release line: **v0.2.x+** with RAG, workspace indexer, operator `/ui/*`, assistants, and `chimera-supervisor` wrapper stack. Patch history: [version-v0.2.md — Shipped releases](version-v0.2.md#shipped-releases-v020-through-v022).
 
 **Operator UI:** after login, app shell at `/ui`; configuration and live logs at **`/ui/settings`**. JSON/SSE APIs under `/api/ui/*`.
 
@@ -39,7 +39,7 @@ Current release line: **v0.2.x+** with RAG, workspace indexer, operator `/ui/*`,
 
 ## As-built — feature records
 
-**[`features/README.md`](features/README.md)** — platform contracts (wrappers, naming, log lines, chat pipeline) and operator features (UI, indexer, virtual models, RAG). Use these when extending or debugging shipped behavior.
+**[`features/README.md`](features/README.md)** — platform contracts (wrappers, naming, log lines, chat pipeline) and operator features (UI, indexer, assistants, RAG). Use these when extending or debugging shipped behavior.
 
 ---
 

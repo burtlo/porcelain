@@ -12,7 +12,7 @@ globalThis.ChimeraSettings.App.mountWireHandlers = function (ctx) {
   if (typeof H.Evlog.wire === "function") H.Evlog.wire(ctx);
   if (typeof H.Chrome.wire === "function") H.Chrome.wire(ctx);
   if (typeof H.Admin.wire === "function") H.Admin.wire(ctx);
-  if (typeof H.VirtualModels.wire === "function") H.VirtualModels.wire(ctx);
+  if (typeof H.Assistants.wire === "function") H.Assistants.wire(ctx);
   if (typeof H.ProviderModels.wire === "function") H.ProviderModels.wire(ctx);
   if (typeof H.RagEmbedding.wire === "function") H.RagEmbedding.wire(ctx);
 };

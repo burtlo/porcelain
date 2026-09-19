@@ -16,8 +16,8 @@ Summarized cards are built in `summarized/model.js` (`buildSummarizedModel`) and
 | `gateway-usage` | `gw-usage-metrics` | `gatewayUsage.js` → `buildGatewayUsageCardHtml` | Yes |
 | `admin-users` | `admin-users` (section wrapper) | `adminUsers.js` → `buildAdminUsersCardHtml` | Yes |
 | `admin-provider` | `admin-provider-{providerId}` | `adminProvider.js` → `buildAdminProviderCardHtml` | Yes |
-| `virtual-model-draft` | `virtual-model-draft-{n}` | `adminVirtualModels.js` → `buildVirtualModelDraftCardHtml` | Yes |
-| `virtual-model` | `virtual-model-{id}` | `adminVirtualModels.js` → `buildVirtualModelCardHtml` | Yes |
+| `assistant-draft` | `assistant-draft-{n}` | `adminAssistants.js` → `buildAssistantDraftCardHtml` | Yes |
+| `assistant` | `assistant-{id}` | `adminAssistants.js` → `buildAssistantCardHtml` | Yes |
 | `section-break` | `section-break-{sortKey}` | HTML from deps (`adminProvidersSectionBreakHtml`, VM section break/intro) | Yes (chrome only) |
 | `conversation` | dynamic (`conversationDomIdForGroup`) | `feedLogConv.js` → `buildConvCard` (mounted from feed before `mountAll`) | Yes |
 | `service` | `svc-{hash(serviceName)}` | `serviceFeed.js` → `buildServiceCard` (+ `serviceCard.js` avatar helpers) | Yes |
@@ -26,7 +26,7 @@ Summarized cards are built in `summarized/model.js` (`buildSummarizedModel`) and
 | `workspace-draft` | `workspace-draft-{id}` | `workspaceDraft.js` → `buildWorkspaceDraftCardHtml` | Yes (when drafts exist) |
 | `indexer-operator-workspace` | `opws-{workspaceId}` | `indexerWorkspace.js` → `buildIndexerOperatorWorkspaceCard` | Yes |
 
-Per-VM routing/fallback/tool-router UI is **inside** `buildVirtualModelCardHtml` (`buildRoutingSection`, `buildFallbackSection`, `buildToolRouterSection`); handlers in `handlers/virtualModelsAdmin.js`. Global gateway cards (`admin-routing-rules`, `admin-fallback-chain`, `admin-router-model`) were removed in favor of this layout.
+Per-VM routing/fallback/tool-router UI is **inside** `buildAssistantCardHtml` (`buildRoutingSection`, `buildFallbackSection`, `buildToolRouterSection`); handlers in `handlers/assistantsAdmin.js`. Global gateway cards (`admin-routing-rules`, `admin-fallback-chain`, `admin-router-model`) were removed in favor of this layout.
 
 ---
 
@@ -42,7 +42,7 @@ Mount order: `mountAll(ctx)` in `mount.js` (admin/gateway cards only; no log-fee
 | `gatewayUsage.js` | `mountGatewayUsage` | `buildGatewayUsageCardHtml`, `buildGatewayUsageIntroHtml` | Feed `patchGatewayUsageMetricsCard` | `GET /api/ui/metrics` | Intro + card split | **P1** |
 | `adminUsers.js` | `mountAdminUsers` | `buildAdminUsersCardHtml`, `buildAdminUserDraftCardHtml`, `adminBuildUserCardHtml` | `admin.js` (`user-add`, `user-draft-*`, token revoke) | `GET/POST /api/ui/tokens` | Draft pattern mirrors workspace draft | **P1** |
 | `adminProvider.js` | `mountAdminProvider` | `buildAdminProviderCardHtml`, `providerHasCredentials` | `admin.js` (keys, Ollama URL), `providerModelsAdmin.js` (availability) | `POST /api/ui/provider/{id}/keys`, `.../ollama/base_url`, `PUT .../models` | Panel/toolbar pattern; model for VM sections | **P0** |
-| `adminVirtualModels.js` | `mountAdminVirtualModels` | `buildVirtualModelCardHtml`, draft/section helpers | `virtualModelsAdmin.js` | `GET/PUT/POST/DELETE /api/ui/virtual-models/...` | Routing/fallback/tool-router sections inline (not shared card builders) | **P0** |
+| `adminAssistants.js` | `mountAdminAssistants` | `buildAssistantCardHtml`, draft/section helpers | `assistantsAdmin.js` | `GET/PUT/POST/DELETE /api/ui/assistants/...` | Routing/fallback/tool-router sections inline (not shared card builders) | **P0** |
 | `workspaceDraft.js` | `mountWorkspaceDraft` | `buildWorkspaceDraftCardHtml`, `buildManagedWorkspace*` toolbar/paths | `admin.js` + feed workspace save | `POST /api/ui/indexer/workspaces` | Shared `WorkspacePaths` + `EditToolbar` | **P1** |
 | `feedLogConv.js` | `mountFeedLogConv` | `buildConvCard`, conv metrics/evlog, `avatarInitials`, `sliceRecent`, error helpers | `evlog.js`, feed | — | Phase 4 extraction from feed | — |
 | `indexerRun.js` | `mountFeedLogIndexerRun` | `buildIndexerCard`, `collectIndexerRunMeta`, evlog label map, run metrics/subtitles, `workspaceCardTitleFromIndexerMeta` | feed, `sumEvlog.js`, `serviceFeed.js` (service card calls `ctx` summary HTML from workspace) | Owns run/meta/evlog (Phase 4) | — |
@@ -64,8 +64,8 @@ Mount order: `mountAll(ctx)` in `mount.js` (admin/gateway cards only; no log-fee
 | `ctx.adminProviderKeyDraft.{providerId}` | Provider keys | `id="admin-{provider}-key"` |
 | `ctx.adminOllamaUrlDraft` | Ollama URL | Ollama-specific inputs in provider card |
 | `ctx.adminProviderModelsEditingId` | Provider models | `sum-card--provider-models-editing`; actions `provider-models-*` |
-| `ctx.virtualModelDrafts[]` | VM create | `id="virtual-model-draft-{id}"`, `data-vm-draft-field`, `vm-draft-save` |
-| `ctx.virtualModelUi[vmId]` | VM saved | `identityEditing`, `fallbackEditing`, `routingEditing`, `routerEditing`, drafts `policyDraft`, `fallbackDraft`, …; actions `vm-*` |
+| `ctx.assistantDrafts[]` | VM create | `id="assistant-draft-{id}"`, `data-vm-draft-field`, `vm-draft-save` |
+| `ctx.assistantUi[vmId]` | VM saved | `identityEditing`, `fallbackEditing`, `routingEditing`, `routerEditing`, drafts `policyDraft`, `fallbackDraft`, …; actions `vm-*` |
 | `ctx.workspaceDrafts[]` | Indexer workspace create | `data-workspace-draft`, draft article id `workspace-draft-{id}` |
 | `ctx.workspaceManagedEditId` / `ctx.workspaceManagedStaging` | Managed workspace paths | Feed-built operator workspace card; actions in `admin.js` |
 
@@ -122,7 +122,7 @@ Target for later extraction (~650 lines in `app/summarizedFeed.js` after Steps 6
 |--------|----------|
 | `api/adminClient.js` | `mountAdminClient` — `adminPostJSON`, `adminPutJSON` |
 | `api/tokens.js` | `mountTokensApi` — `fetchAdminTokens`, `fetchTokenLabels` |
-| `api/virtualModels.js` | `mountVirtualModelsApi` — `fetchVirtualModelDetail` |
+| `api/assistants.js` | `mountAssistantsApi` — `fetchAssistantDetail` |
 | `api/providerModels.js` | `mountProviderModelsApi` — prefetch + `fetchProviderModels` |
 | `handlers/providerPicker.js` | Catalog bootstrap + add-provider picker DOM |
 | `derive/indexerScopeFullLog.js` | `mountIndexerScopeBridge` — ctx scope delegates |
@@ -150,7 +150,7 @@ Slug pattern: `{card-kind}.{region}`. Canonical list: [`card-parts-registry.md`]
 |-----------|--------|
 | `gateway-overview.summary` | `<summary>` title, subtitle, compact health |
 | `gateway-overview.health-strip` | Expanded service health strip |
-| `gateway-overview.kv` | Version / virtual model / updated KV |
+| `gateway-overview.kv` | Version / Assistant / updated KV |
 
 ### `gateway-usage` (`gw-usage-metrics`)
 
@@ -180,23 +180,23 @@ Slug pattern: `{card-kind}.{region}`. Canonical list: [`card-parts-registry.md`]
 | `admin-provider.keys` | Key list + add block |
 | `admin-provider.scoped-evlog` | In-card `sum-evlog` |
 
-### `virtual-model` (`virtual-model-{id}`)
+### `assistant` (`assistant-{id}`)
 
 | Seed slug | Region |
 |-----------|--------|
-| `virtual-model.summary` | Card `<summary>` |
-| `virtual-model.client-usage` | Client usage block |
-| `virtual-model.identity` | `data-vm-section="identity"` |
-| `virtual-model.fallback` | `data-vm-section="fallback"` |
-| `virtual-model.routing` | `data-vm-section="routing"` |
-| `virtual-model.tool-router` | `data-vm-section="router"` |
-| `virtual-model.scoped-evlog` | Scoped routing log |
+| `assistant.summary` | Card `<summary>` |
+| `assistant.client-usage` | Client usage block |
+| `assistant.identity` | `data-vm-section="identity"` |
+| `assistant.fallback` | `data-vm-section="fallback"` |
+| `assistant.routing` | `data-vm-section="routing"` |
+| `assistant.tool-router` | `data-vm-section="router"` |
+| `assistant.scoped-evlog` | Scoped routing log |
 
-### `virtual-model-draft`
+### `assistant-draft`
 
 | Seed slug | Region |
 |-----------|--------|
-| `virtual-model-draft.form` | Draft fields + save/cancel |
+| `assistant-draft.form` | Draft fields + save/cancel |
 
 ### `workspace-draft` / `indexer-operator-workspace`
 
@@ -215,11 +215,11 @@ Slug pattern: `{card-kind}.{region}`. Canonical list: [`card-parts-registry.md`]
 | `service` | `service.summary`, `service.health-timeline`, `service.metrics`, `service.scoped-evlog` |
 | `indexer` | `indexer.summary`, `indexer.progress`, `indexer.kv`, `indexer.scoped-evlog` |
 
-### Virtual model sub-panels (live site)
+### Assistant sub-panels (live site)
 
 | Kind | Seed slug | Note |
 |------|-----------|------|
-| `virtual-model` | `virtual-model.routing`, `virtual-model.fallback`, `virtual-model.tool-router` | Per-VM sections in `adminVirtualModels.js` |
+| `assistant` | `assistant.routing`, `assistant.fallback`, `assistant.tool-router` | Per-VM sections in `adminAssistants.js` |
 
 ---
 

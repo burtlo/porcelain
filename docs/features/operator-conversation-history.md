@@ -85,7 +85,7 @@ All conversation routes require authenticated UI session JSON handlers (`Require
 | Session / principal | `internal/server/adminui/session/session.go`, `handler/handler.go` |
 | Store | `internal/operatorstore/conversations.go`, `store.go` |
 | Title helper | `conversationtitle.FromFirstUserMessage` |
-| Chat persistence hooks | `internal/server/server.go`, `virtualmodel_chat.go` |
+| Chat persistence hooks | `internal/server/server.go`, `assistant_chat.go` |
 | RAG metadata | `internal/rag/response_meta.go` |
 | Migration | `migrations/chimera-gateway/operator/000003_conversation_history.sql` |
 | Tests | `embed/embedui_test/chat_history_test.go`, operatorstore unit tests |

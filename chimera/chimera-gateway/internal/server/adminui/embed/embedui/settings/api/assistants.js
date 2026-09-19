@@ -1,11 +1,11 @@
 /**
- * Virtual model detail fetch + adminStateCache summary sync.
- * Exports: ChimeraSettings.Api.mountVirtualModelsApi(ctx, bridge)
+ * Assistant detail fetch + adminStateCache summary sync.
+ * Exports: ChimeraSettings.Api.mountAssistantsApi(ctx, bridge)
  */
 globalThis.ChimeraSettings = globalThis.ChimeraSettings || {};
 globalThis.ChimeraSettings.Api = globalThis.ChimeraSettings.Api || {};
 
-globalThis.ChimeraSettings.Api.mountVirtualModelsApi = function (ctx, bridge) {
+globalThis.ChimeraSettings.Api.mountAssistantsApi = function (ctx, bridge) {
   bridge = bridge || {};
 
   function markUnauthorized() {
@@ -13,14 +13,14 @@ globalThis.ChimeraSettings.Api.mountVirtualModelsApi = function (ctx, bridge) {
     else if (typeof ctx.markUiUnauthorized === "function") ctx.markUiUnauthorized();
   }
 
-  function syncVmSummaryFromDetail(detail) {
+  function syncAssistantSummaryFromDetail(detail) {
     if (!detail || detail.id == null) return;
     var gw = ctx.adminStateCache && ctx.adminStateCache.gateway;
-    if (!gw || !gw.virtual_models) return;
+    if (!gw || !gw.assistants) return;
     var key = String(detail.id);
-    for (var i = 0; i < gw.virtual_models.length; i++) {
-      if (gw.virtual_models[i] && String(gw.virtual_models[i].id) === key) {
-        var row = gw.virtual_models[i];
+    for (var i = 0; i < gw.assistants.length; i++) {
+      if (gw.assistants[i] && String(gw.assistants[i].id) === key) {
+        var row = gw.assistants[i];
         row.enabled = !!detail.enabled;
         row.name = detail.name;
         row.version = detail.version;
@@ -35,20 +35,20 @@ globalThis.ChimeraSettings.Api.mountVirtualModelsApi = function (ctx, bridge) {
     }
   }
 
-  function fetchVirtualModelDetail(vmId, force) {
+  function fetchAssistantDetail(vmId, force) {
     if (ctx.uiUnauthorized) return Promise.resolve(null);
     var key = String(vmId);
-    if (!ctx.virtualModelDetails) ctx.virtualModelDetails = {};
-    if (!ctx.virtualModelUi) ctx.virtualModelUi = {};
-    var ui = ctx.virtualModelUi[key];
+    if (!ctx.assistantDetails) ctx.assistantDetails = {};
+    if (!ctx.assistantUi) ctx.assistantUi = {};
+    var ui = ctx.assistantUi[key];
     if (!ui) {
-      ui = ctx.virtualModelUi[key] = { panelOpen: false, hydrated: false };
+      ui = ctx.assistantUi[key] = { panelOpen: false, hydrated: false };
     }
-    if (!force && ctx.virtualModelDetails[key]) {
-      return Promise.resolve(ctx.virtualModelDetails[key]);
+    if (!force && ctx.assistantDetails[key]) {
+      return Promise.resolve(ctx.assistantDetails[key]);
     }
     ui.detailLoading = true;
-    return fetch("/api/ui/virtual-models/" + encodeURIComponent(key), { credentials: "same-origin" })
+    return fetch("/api/ui/assistants/" + encodeURIComponent(key), { credentials: "same-origin" })
       .then(function (r) {
         if (r.status === 401) {
           markUnauthorized();
@@ -60,8 +60,8 @@ globalThis.ChimeraSettings.Api.mountVirtualModelsApi = function (ctx, bridge) {
       .then(function (j) {
         ui.detailLoading = false;
         if (!j) return null;
-        ctx.virtualModelDetails[key] = j;
-        syncVmSummaryFromDetail(j);
+        ctx.assistantDetails[key] = j;
+        syncAssistantSummaryFromDetail(j);
         return j;
       })
       .catch(function (e) {
@@ -70,10 +70,10 @@ globalThis.ChimeraSettings.Api.mountVirtualModelsApi = function (ctx, bridge) {
       });
   }
 
-  ctx.fetchVirtualModelDetail = fetchVirtualModelDetail;
+  ctx.fetchAssistantDetail = fetchAssistantDetail;
 
   return {
-    fetchVirtualModelDetail: fetchVirtualModelDetail,
-    syncVmSummaryFromDetail: syncVmSummaryFromDetail
+    fetchAssistantDetail: fetchAssistantDetail,
+    syncAssistantSummaryFromDetail: syncAssistantSummaryFromDetail
   };
 };

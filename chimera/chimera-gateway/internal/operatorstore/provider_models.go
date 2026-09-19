@@ -51,7 +51,7 @@ func (s *Store) ListDistinctTenantIDs(ctx context.Context) ([]string, error) {
 SELECT DISTINCT tenant_id FROM (
 	SELECT tenant_id FROM workspaces
 	UNION
-	SELECT tenant_id FROM virtual_models
+	SELECT tenant_id FROM assistants
 	UNION
 	SELECT tenant_id FROM provider_model_availability
 )`)

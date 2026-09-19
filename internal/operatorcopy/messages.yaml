@@ -321,6 +321,18 @@ messages:
   - slug: gateway.catalog.fallback_unavailable_model
     formatter: gateway_catalog_fallback_unavailable_model
     gallery_preview: Unavailable model still listed in a configured fallback chain.
+  - slug: gateway.assistant.bootstrap_failed
+    summary: Assistant registry bootstrap failed during gateway startup.
+    gallery_preview: Assistant bootstrap failed
+  - slug: gateway.assistant.bootstrap_imported
+    summary: Legacy assistant definitions imported during gateway bootstrap.
+    gallery_preview: Assistant definitions imported from legacy config
+  - slug: gateway.assistant.gemini_seeded
+    summary: Default Gemini assistant seeded in the operator store.
+    gallery_preview: Gemini assistant seeded
+  - slug: gateway.assistant.reload_failed
+    summary: Assistant registry reload failed after bootstrap.
+    gallery_preview: Assistant registry reload failed
   - slug: broker.http.access
     formatter: http_broker_inbound
     aliases:
@@ -351,13 +363,16 @@ messages:
   - slug: chat.routing.attempt
     formatter: broker_routing_relay
     aliases:
-      - virtual model fallback attempt
+      - assistant fallback attempt
     gallery_preview: Routing attempt · gpt-4o · attempt 2/3
   - slug: chat.routing.resolved
     formatter: broker_routing_relay
     aliases:
-      - virtual model routing resolved
+      - assistant routing resolved
     gallery_preview: Routing resolved · gpt-4o · attempt 1/1 · HTTP 200
+  - slug: chat.routing.assistant_skipped
+    summary: Assistant routing skipped a model in the fallback chain (HTTP 413 on an earlier attempt this request).
+    gallery_preview: Assistant routing skipped model (413 earlier this request)
   - slug: chat.routing.rate_limit
     formatter: conversation_routing_rate_limit
     gallery_preview: Rate limited on model · TPM limit · used · requested · trying next model.

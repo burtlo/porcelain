@@ -7,7 +7,7 @@
 
 # chimera-gateway: client-facing API, operator UI, routing, and RAG orchestration.
 #
-# Binds HTTP (listen_host / listen_port). Virtual models are configured in operator settings (SQLite).
+# Binds HTTP (listen_host / listen_port). Assistants are configured in operator settings (SQLite).
 gateway:
   # Gateway release semver (display / diagnostics).
   semver: "0.2.0"

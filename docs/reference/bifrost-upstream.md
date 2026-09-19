@@ -11,7 +11,7 @@ Maxim **BiFrost** (`bifrost-http`) is the default **LLM broker backend** behind 
 | Layer | Binary | Role |
 |-------|--------|------|
 | Client | IDE / Continue | `POST /v1/chat/completions` → **chimera-gateway** |
-| Gateway | **chimera-gateway** | Virtual models, routing, RAG, logs |
+| Gateway | **chimera-gateway** | Assistants, routing, RAG, logs |
 | Wrapper | **chimera-broker** | Supervises `bifrost-http`; `BROKER__*` env |
 | Upstream | **bifrost-http** | Multi-provider OpenAI-compatible proxy |
 
@@ -72,7 +72,7 @@ Gateway YAML uses `upstream.*` for the OpenAI-compatible hop. Legacy `litellm` /
 |-------|------|
 | `upstream.base_url` | Broker backend root (e.g. `http://127.0.0.1:8080`). Supervisor overrides to match supervised listen addresses. |
 | `upstream.api_key_env` | Env var for `Authorization: Bearer` on upstream `/v1/*`. Default `CHIMERA_BROKER_API_KEY`. |
-| Virtual model stacks | Per-model fallback chains and routing rules in operator SQLite — see [operator-virtual-models](../features/operator-virtual-models.md). |
+| Assistant stacks | Per-assistant fallback chains and routing rules in operator SQLite — see [operator-assistants](../features/operator-assistants.md). |
 | `paths.tokens` / routing policy | Gateway auth and policy file paths. |
 
 ---
@@ -90,9 +90,9 @@ BiFrost subprocess rows may join a conversation only if BiFrost exposes `X-Reque
 | Area | Behavior |
 |------|----------|
 | **Chat** | `POST /v1/chat/completions`; streaming SSE pass-through |
-| **Model list** | Gateway merges upstream catalog with operator virtual models |
+| **Model list** | Gateway merges upstream catalog with operator assistants |
 | **Health** | `GET {base_url}/health` — gateway `/health` includes upstream probe |
-| **Fallback** | **429** / selected **5xx** / admission blocks walk the virtual model fallback chain |
+| **Fallback** | **429** / selected **5xx** / admission blocks walk the assistant fallback chain |
 
 ---
 

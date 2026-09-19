@@ -129,7 +129,7 @@ func TestV1Chat_echoesCorrelationHeaders(t *testing.T) {
 	}
 }
 
-func TestVirtualModelChat_InjectsRetrievedContext(t *testing.T) {
+func TestAssistantChat_InjectsRetrievedContext(t *testing.T) {
 	url, cap, _ := setupRAGChatServer(t)
 	body := `{"model":"Chimera-0.2.0","messages":[{"role":"user","content":"tell me about retrieved-knowledge"}],"stream":false}`
 	req, _ := http.NewRequest(http.MethodPost, url+"/v1/chat/completions", strings.NewReader(body))
@@ -174,7 +174,7 @@ func TestVirtualModelChat_InjectsRetrievedContext(t *testing.T) {
 	}
 }
 
-func TestVirtualModelChat_NoContextWhenRAGDisabled(t *testing.T) {
+func TestAssistantChat_NoContextWhenRAGDisabled(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 	captured := &capturedReqs{}
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

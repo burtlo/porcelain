@@ -109,7 +109,7 @@ var gatewayIndexTmpl = template.Must(template.New("gatewayIndex").Parse(`<!DOCTY
   <h2>Version</h2>
   <dl>
     <dt>Gateway version</dt><dd><code>{{.Semver}}</code></dd>
-    <dt>Virtual model</dt><dd><code>{{.VirtualModel}}</code></dd>
+    <dt>Assistant</dt><dd><code>{{.Assistant}}</code></dd>
   </dl>
 
   <h2>Services</h2>
@@ -221,7 +221,7 @@ func NewMux(rt *Runtime, log *slog.Logger, overlay *StatusOverlay, ui *UIOptions
 		}
 
 		data := struct {
-			Semver, VirtualModel string
+			Semver, Assistant string
 			GatewayURL           string
 			BrokerURL            string
 			BrokerOK             bool
@@ -238,7 +238,7 @@ func NewMux(rt *Runtime, log *slog.Logger, overlay *StatusOverlay, ui *UIOptions
 			ModelCount           string
 		}{
 			Semver:             res.Semver,
-			VirtualModel:       rt.PrimaryVirtualModelID(),
+			Assistant:          rt.PrimaryAssistantID(),
 			GatewayURL:         gwURL,
 			BrokerURL:          chimeraBrokerURL,
 			BrokerOK:           chimeraBrokerOK,
@@ -501,7 +501,7 @@ func writeMergedModelsResponse(w http.ResponseWriter, ctx context.Context, rt *R
 	}
 	ensureOpenAIModelListItems(data)
 	data = catalog.FilterOpenAIModelDataByAvailability(data, rt.ProviderModelAvailability(principalID))
-	out := prependVirtualModelsToCatalog(data, rt, principalID)
+	out := prependAssistantsToCatalog(data, rt, principalID)
 	_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": out})
 }
 
@@ -709,7 +709,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		histRec.Attach(&chatOpts)
 	}
 
-	vmCtx, vmStatus, vmErrBody := resolveVirtualModelChat(rt, clientModel, sess.TenantID)
+	vmCtx, vmStatus, vmErrBody := resolveAssistantChat(rt, clientModel, sess.TenantID)
 	if vmErrBody != nil {
 		if histRec != nil {
 			histRec.PersistGatewayError(vmStatus, vmErrBody)
@@ -720,7 +720,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		return
 	}
 	if vmCtx != nil {
-		if handleVirtualModelChat(ctx, w, rt, res, vmCtx, raw, stream, skipToolRouter, headerToolThresh, routeLog,
+		if handleAssistantChat(ctx, w, rt, res, vmCtx, raw, stream, skipToolRouter, headerToolThresh, routeLog,
 			cid, turnIdx, rid, sess.TenantID, proj, flav, apiKey, rtDur, chatOpts, histRec) {
 			return
 		}

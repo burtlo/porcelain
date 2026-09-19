@@ -32,7 +32,7 @@ func loadFeedSmokeStack(t *testing.T, vm *goja.Runtime) {
 	}
 	for _, f := range []string{
 		"sharedFormat.js", "convCard.js", "serviceCard.js", "gatewayOverview.js", "gatewayUsage.js",
-		"adminShared.js", "adminUsers.js", "adminProvider.js", "adminVirtualModels.js", "workspaceDraft.js",
+		"adminShared.js", "adminUsers.js", "adminProvider.js", "adminAssistants.js", "workspaceDraft.js",
 		"feedLogConv.js",
 	} {
 		evalJS(t, vm, cardsUIPath(t, f))
@@ -78,19 +78,19 @@ func loadFeedSmokeStack(t *testing.T, vm *goja.Runtime) {
 			metricsEventsTableHtml: function () { return ""; },
 			metricsCache: { metrics_store_open: true, rows: [], message: "" },
 			gatewayOverviewCache: {
-				virtual_model_id: "virtual/test",
+				assistant_id: "virtual/test",
 				service_overview: { refreshed_at: "2026-01-01T12:00:00Z", services: [] }
 			},
 			tokenListCache: [],
 			adminUserDrafts: [],
-			virtualModelDrafts: [],
+			assistantDrafts: [],
 			adminProviderKeyDraft: {},
 			adminVisibleProviderIds: [],
 			adminOllamaUrlDraft: null,
 			adminProviderModelsEditingId: null,
 			adminProviderModelsDraft: {},
 			adminProviderModelsCache: {},
-			adminStateCache: { providers: {}, gateway: { virtual_models: [] } },
+			adminStateCache: { providers: {}, gateway: { assistants: [] } },
 			tokenLabelByTenant: {},
 			workspaceDrafts: [],
 			lastIndexerOperatorWorkspacesNested: [],

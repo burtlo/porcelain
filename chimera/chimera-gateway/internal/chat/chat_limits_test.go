@@ -699,7 +699,7 @@ func TestWithVirtualModelFallback_skipsOperatorUnavailableModel(t *testing.T) {
 	chain := []string{"groq/blocked", "groq/ok"}
 	opts := &ProxyOpts{
 		ModelAvailable: avail,
-		VirtualModelID: "Test-1.0.0",
+		AssistantID: "Test-1.0.0",
 	}
 	WithVirtualModelFallback(context.Background(), w, "groq/blocked", chain, up.URL, "", false, map[string]json.RawMessage{
 		"model": json.RawMessage(`"Test-1.0.0"`),

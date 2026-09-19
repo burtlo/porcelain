@@ -130,7 +130,7 @@ func loadCardTestCtx(t *testing.T, vm *goja.Runtime) {
 	evalJS(t, vm, settingsUIPath(t, "render", "cardChrome.js"))
 	for _, f := range []string{
 		"sharedFormat.js", "convCard.js", "serviceCard.js", "gatewayOverview.js", "gatewayUsage.js",
-		"adminShared.js", "adminUsers.js", "adminProvider.js", "adminVirtualModels.js", "workspaceDraft.js",
+		"adminShared.js", "adminUsers.js", "adminProvider.js", "adminAssistants.js", "workspaceDraft.js",
 		"feedLogConv.js",
 	} {
 		evalJS(t, vm, cardsUIPath(t, f))
@@ -162,13 +162,13 @@ func loadCardTestCtx(t *testing.T, vm *goja.Runtime) {
 			chimeraBrokerShortModelLabel: function (id) { return String(id || "—"); },
 			metricsCache: null,
 			gatewayOverviewCache: {
-				virtual_model_id: "virtual/test",
+				assistant_id: "virtual/test",
 				service_overview: { refreshed_at: "2026-01-01T12:00:00Z", services: [] }
 			},
 			tokenListCache: [{ tenant_id: "tenant-a", label: "Alice", index: 0 }],
 			adminUserDrafts: [],
-			virtualModelDrafts: [],
-			nextVirtualModelDraftId: 1,
+			assistantDrafts: [],
+			nextAssistantDraftId: 1,
 			adminProviderKeyDraft: {},
 			adminVisibleProviderIds: ["groq", "ollama"],
 			adminOllamaUrlDraft: null,

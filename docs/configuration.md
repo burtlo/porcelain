@@ -27,7 +27,7 @@ The `chimera` program (`go build -o chimera ./cmd/chimera`) reads:
 - **Broker endpoint (YAML `broker.*`):** `broker.base_url`, `broker.api_key_env`, `health.*`, `paths.*` — see tables below. Points at **chimera-broker** (or a standalone OpenAI-compatible proxy during local dev).
 - **`.env`:** At startup, the runtime loads an optional `.env` in the **process working directory** (via `github.com/joho/godotenv`). Missing file is normal when the environment is injected by your shell or service manager.
 
-`GET /health` returns JSON including `checks.vectorstore` when RAG is enabled and `checks.upstream` (broker/backend probe). `GET /v1/models` lists **enabled virtual models** from operator SQLite (when any exist) merged with the **chimera-broker** catalog. `POST /v1/chat/completions` validates the gateway Bearer token; when `body.model` matches a virtual model id the gateway applies that VM's routing stack (policy, fallback, tool router); otherwise it proxies directly to the upstream model id.
+`GET /health` returns JSON including `checks.vectorstore` when RAG is enabled and `checks.upstream` (broker/backend probe). `GET /v1/models` lists **enabled assistants** from operator SQLite (when any exist) merged with the **chimera-broker** catalog. `POST /v1/chat/completions` validates the gateway Bearer token; when `body.model` matches an assistant `model_id` the gateway applies that assistant's routing stack (policy, fallback, tool router); otherwise it proxies directly to the upstream model id.
 
 To run **chimera-broker** and **chimera-vectorstore** as supervised wrappers, use `chimera serve` or make target `chimera-supervisor-run` — see [supervisor.md](supervisor.md). BiFrost/Qdrant remain the typical local backends behind those wrappers.
 
@@ -41,7 +41,7 @@ To run **chimera-broker** and **chimera-vectorstore** as supervised wrappers, us
 
 Provider keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are **not** read by the gateway; **BiFrost** (`config/bifrost.config.json`) consumes them.
 
-**Model listing (BiFrost):** `GET /v1/models` on BiFrost alone may return entries like `groq/*`. The gateway first calls BiFrost’s `GET /api/models?unfiltered=true&limit=500`, maps each `{ provider, name }` to an OpenAI-style id `provider/name`, then merges enabled **virtual models** from operator SQLite. If that route is missing, the gateway uses `GET /v1/models` only. See `scripts/list-bifrost-models.sh`.
+**Model listing (BiFrost):** `GET /v1/models` on BiFrost alone may return entries like `groq/*`. The gateway first calls BiFrost’s `GET /api/models?unfiltered=true&limit=500`, maps each `{ provider, name }` to an OpenAI-style id `provider/name`, then merges enabled **assistants** from operator SQLite. If that route is missing, the gateway uses `GET /v1/models` only. See `scripts/list-bifrost-models.sh`.
 
 ## `config/gateway.yaml`
 
@@ -74,16 +74,18 @@ Provider keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are **n
 
 Reload: change file and **save** (mtime update). On reload, if token paths change, those stores are re-opened.
 
-### Chat routing (virtual models)
+### Chat routing (assistants)
 
-Routing (fallback chains, policy rules, tool router) is configured **per virtual model** in operator SQLite via `/ui/settings` virtual model cards — not in `gateway.yaml`. See [Operator virtual models](features/operator-virtual-models.md) and [Gateway chat routing pipeline](features/gateway-chat-routing-pipeline.md).
+Routing (fallback chains, policy rules, tool router) is configured **per assistant** in operator SQLite via `/ui/settings` assistant cards — not in `gateway.yaml`. See [Operator assistants](features/operator-assistants.md) and [Gateway chat routing pipeline](features/gateway-chat-routing-pipeline.md).
 
 | Client `model` value | Gateway behavior |
 |----------------------|------------------|
-| Virtual model id (e.g. `MyModel-1.0.0`) | Apply that VM's routing stack; walk fallback on 429/selected 5xx |
+| Assistant `model_id` (e.g. `MyModel-1.0.0`) | Apply that assistant's routing stack; walk fallback on 429/selected 5xx |
 | Upstream id (e.g. `groq/llama-3.1-8b-instant`) | Direct proxy to chimera-broker; no fallback walk |
 
-Fresh installs have **zero** virtual models until the operator creates them in settings.
+Fresh installs have **zero** assistants until the operator creates them in settings.
+
+**SQLite upgrade:** existing databases migrate automatically via `000011_assistants.sql` (`virtual_models` → `assistants`, `virtual_model_id` → `assistant_id`). See [Operator assistants](features/operator-assistants.md#sqlite-upgrade-path-existing-databases).
 
 ### Supervised file indexer (`indexer.supervised`)
 

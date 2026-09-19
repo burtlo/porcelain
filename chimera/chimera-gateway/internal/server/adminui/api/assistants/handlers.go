@@ -1,4 +1,4 @@
-package virtualmodels
+package assistants
 
 import (
 	"context"
@@ -19,8 +19,8 @@ import (
 
 const operatorTenantID = ""
 
-func vmSummary(vm operatorstore.VirtualModel) operatorapi.VirtualModelSummary {
-	return operatorapi.VirtualModelSummary{
+func assistantSummary(vm operatorstore.VirtualModel) operatorapi.AssistantSummary {
+	return operatorapi.AssistantSummary{
 		ID:                   vm.ID,
 		ModelID:              vm.ModelID,
 		Name:                 vm.Name,
@@ -35,9 +35,9 @@ func vmSummary(vm operatorstore.VirtualModel) operatorapi.VirtualModelSummary {
 	}
 }
 
-func vmDetail(vm operatorstore.VirtualModel) operatorapi.VirtualModelDetail {
-	return operatorapi.VirtualModelDetail{
-		VirtualModelSummary:  vmSummary(vm),
+func assistantDetail(vm operatorstore.VirtualModel) operatorapi.AssistantDetail {
+	return operatorapi.AssistantDetail{
+		AssistantSummary:     assistantSummary(vm),
 		RoutingPolicyYAML:    vm.RoutingPolicyYAML,
 		FallbackChain:        vm.FallbackChain,
 		ToolRouterConfidence: vm.ToolRouterConfidence,
@@ -47,8 +47,8 @@ func vmDetail(vm operatorstore.VirtualModel) operatorapi.VirtualModelDetail {
 	}
 }
 
-func vmDetailForSession(h *handler.Handler, r *http.Request, vm operatorstore.VirtualModel) operatorapi.VirtualModelDetail {
-	out := vmDetail(vm)
+func assistantDetailForSession(h *handler.Handler, r *http.Request, vm operatorstore.VirtualModel) operatorapi.AssistantDetail {
+	out := assistantDetail(vm)
 	if h == nil || h.RT == nil {
 		return out
 	}
@@ -93,10 +93,10 @@ func reloadRegistry(h *handler.Handler, ctx context.Context) {
 	if h == nil || h.RT == nil {
 		return
 	}
-	_ = h.RT.ReloadVirtualModels(ctx)
+	_ = h.RT.ReloadAssistants(ctx)
 }
 
-func parseVMID(r *http.Request) (int64, bool) {
+func parseAssistantID(r *http.Request) (int64, bool) {
 	idStr := strings.TrimSpace(r.PathValue("id"))
 	if idStr == "" {
 		return 0, false
@@ -119,12 +119,12 @@ func handleListGET(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	out := make([]operatorapi.VirtualModelSummary, 0, len(vms))
+	out := make([]operatorapi.AssistantSummary, 0, len(vms))
 	for _, vm := range vms {
-		out = append(out, vmSummary(vm))
+		out = append(out, assistantSummary(vm))
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(operatorapi.VirtualModelListResponse{VirtualModels: out})
+	_ = json.NewEncoder(w).Encode(operatorapi.AssistantListResponse{Assistants: out})
 }
 
 func handleCreatePOST(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
@@ -133,7 +133,7 @@ func handleCreatePOST(h *handler.Handler, w http.ResponseWriter, r *http.Request
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	var body operatorapi.VirtualModelCreateRequest
+	var body operatorapi.AssistantCreateRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -154,7 +154,7 @@ func handleCreatePOST(h *handler.Handler, w http.ResponseWriter, r *http.Request
 	reloadRegistry(h, r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(vmDetail(*vm))
+	_ = json.NewEncoder(w).Encode(assistantDetail(*vm))
 }
 
 func handleGetGET(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
@@ -163,7 +163,7 @@ func handleGetGET(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -178,7 +178,7 @@ func handleGetGET(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(vmDetailForSession(h, r, *vm))
+	_ = json.NewEncoder(w).Encode(assistantDetailForSession(h, r, *vm))
 }
 
 func handleUpdatePUT(h *handler.Handler, w http.ResponseWriter, r *http.Request) {
@@ -187,12 +187,12 @@ func handleUpdatePUT(h *handler.Handler, w http.ResponseWriter, r *http.Request)
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	var body operatorapi.VirtualModelUpdateRequest
+	var body operatorapi.AssistantUpdateRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -225,7 +225,7 @@ func handleDeleteDELETE(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -248,12 +248,12 @@ func handleFallbackPUT(h *handler.Handler, w http.ResponseWriter, r *http.Reques
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	var body operatorapi.VirtualModelFallbackSaveRequest
+	var body operatorapi.AssistantFallbackSaveRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -277,12 +277,12 @@ func handleRoutingPolicyPUT(h *handler.Handler, w http.ResponseWriter, r *http.R
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	var body operatorapi.VirtualModelRoutingPolicySaveRequest
+	var body operatorapi.AssistantRoutingPolicySaveRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2<<20)).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -312,12 +312,12 @@ func handleToolRouterPUT(h *handler.Handler, w http.ResponseWriter, r *http.Requ
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	var body operatorapi.VirtualModelToolRouterSaveRequest
+	var body operatorapi.AssistantToolRouterSaveRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -362,7 +362,7 @@ func handleGeneratePOST(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -372,7 +372,7 @@ func handleGeneratePOST(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 		http.NotFound(w, r)
 		return
 	}
-	var body operatorapi.VirtualModelGenerateRequest
+	var body operatorapi.AssistantGenerateRequest
 	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body)
 
 	h.RT.Sync()
@@ -437,7 +437,7 @@ func handleEvaluatePOST(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 		http.Error(w, "operator store unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	id, ok := parseVMID(r)
+	id, ok := parseAssistantID(r)
 	if !ok {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -460,15 +460,15 @@ func handleEvaluatePOST(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 	if len(chain) == 0 {
 		chain = vm.FallbackChain
 	}
-	vmID := strings.TrimSpace(body.VirtualModelID)
-	if vmID == "" {
-		vmID = vm.ModelID
+	modelID := strings.TrimSpace(body.AssistantID)
+	if modelID == "" {
+		modelID = vm.ModelID
 	}
-	reqBody := map[string]json.RawMessage{"model": json.RawMessage(`"` + vmID + `"`)}
+	reqBody := map[string]json.RawMessage{"model": json.RawMessage(`"` + modelID + `"`)}
 	if len(body.Messages) > 0 {
 		reqBody["messages"] = body.Messages
 	}
-	initial, via, err := routing.EvaluatePick(policyYAML, reqBody, chain, vmID, h.Log)
+	initial, via, err := routing.EvaluatePick(policyYAML, reqBody, chain, modelID, h.Log)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

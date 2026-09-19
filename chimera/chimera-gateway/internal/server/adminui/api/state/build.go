@@ -85,12 +85,12 @@ func BuildResponse(ctx context.Context, tenantID string, publicBaseURL string, r
 		}
 	}
 
-	vmSummaries := []operatorapi.VirtualModelSummary{}
+	assistantSummaries := []operatorapi.AssistantSummary{}
 	if store := rt.OperatorStore(); store != nil {
 		if vms, err := store.ListVirtualModels(ctx, "", ""); err == nil {
-			vmSummaries = make([]operatorapi.VirtualModelSummary, 0, len(vms))
+			assistantSummaries = make([]operatorapi.AssistantSummary, 0, len(vms))
 			for _, vm := range vms {
-				vmSummaries = append(vmSummaries, operatorapi.VirtualModelSummary{
+				assistantSummaries = append(assistantSummaries, operatorapi.AssistantSummary{
 					ID:                   vm.ID,
 					ModelID:              vm.ModelID,
 					Name:                 vm.Name,
@@ -106,17 +106,17 @@ func BuildResponse(ctx context.Context, tenantID string, publicBaseURL string, r
 			}
 		}
 	}
-	bootstrapVMID := ""
-	if reg := rt.VirtualModels(); reg != nil {
-		bootstrapVMID = reg.BootstrapModelID()
+	bootstrapAssistantID := ""
+	if reg := rt.Assistants(); reg != nil {
+		bootstrapAssistantID = reg.BootstrapModelID()
 	}
 
 	return operatorapi.StateResponse{
 		Gateway: operatorapi.GatewayState{
-			Semver:         res.Semver,
-			VirtualModelID: bootstrapVMID,
-			PublicBaseURL:  publicBaseURL,
-			TokenHint:      "Paste the same gateway token you used to sign in.",
+			Semver:        res.Semver,
+			AssistantID:   bootstrapAssistantID,
+			PublicBaseURL: publicBaseURL,
+			TokenHint:     "Paste the same gateway token you used to sign in.",
 			ServiceOverview: operatorapi.ServiceOverview{
 				OverallState: overviewState,
 				Gateway:      operatorapi.ServiceState{State: "up"},
@@ -146,7 +146,7 @@ func BuildResponse(ctx context.Context, tenantID string, publicBaseURL string, r
 			IndexerSupervisedEnabled:    res.IndexerSupervisedEnabled,
 			OperatorSQLitePath:          res.OperatorSQLitePath,
 			OperatorStoreOpen:           rt.OperatorStore() != nil,
-			VirtualModels:               vmSummaries,
+			Assistants:                  assistantSummaries,
 		},
 		Providers:             provOut,
 		ConfiguredProviderIDs: append([]string(nil), probeNames...),

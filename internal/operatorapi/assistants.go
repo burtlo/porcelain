@@ -1,7 +1,7 @@
 package operatorapi
 
-// VirtualModelSummary is a list entry for GET /api/ui/state and virtual-models list.
-type VirtualModelSummary struct {
+// AssistantSummary is a list entry for GET /api/ui/state and assistants list.
+type AssistantSummary struct {
 	ID                   int64    `json:"id"`
 	ModelID              string   `json:"model_id"`
 	Name                 string   `json:"name"`
@@ -15,9 +15,9 @@ type VirtualModelSummary struct {
 	RouterModels         []string `json:"router_models,omitempty"`
 }
 
-// VirtualModelDetail is GET /api/ui/virtual-models/{id}.
-type VirtualModelDetail struct {
-	VirtualModelSummary
+// AssistantDetail is GET /api/ui/assistants/{id}.
+type AssistantDetail struct {
+	AssistantSummary
 	RoutingPolicyYAML    string   `json:"routing_policy_yaml,omitempty"`
 	FallbackChain        []string `json:"fallback_chain"`
 	FallbackUnavailable  []string `json:"fallback_unavailable,omitempty"`
@@ -27,8 +27,8 @@ type VirtualModelDetail struct {
 	UpdatedAt            string   `json:"updated_at"`
 }
 
-// VirtualModelCreateRequest is POST /api/ui/virtual-models body.
-type VirtualModelCreateRequest struct {
+// AssistantCreateRequest is POST /api/ui/assistants body.
+type AssistantCreateRequest struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
 	Description string `json:"description,omitempty"`
@@ -36,8 +36,8 @@ type VirtualModelCreateRequest struct {
 	ModelID     string `json:"model_id,omitempty"`
 }
 
-// VirtualModelUpdateRequest is PUT /api/ui/virtual-models/{id} body.
-type VirtualModelUpdateRequest struct {
+// AssistantUpdateRequest is PUT /api/ui/assistants/{id} body.
+type AssistantUpdateRequest struct {
 	Name        *string `json:"name,omitempty"`
 	Version     *string `json:"version,omitempty"`
 	Description *string `json:"description,omitempty"`
@@ -45,31 +45,31 @@ type VirtualModelUpdateRequest struct {
 	Visibility  *string `json:"visibility,omitempty"`
 }
 
-// VirtualModelFallbackSaveRequest is PUT /api/ui/virtual-models/{id}/fallback.
-type VirtualModelFallbackSaveRequest struct {
+// AssistantFallbackSaveRequest is PUT /api/ui/assistants/{id}/fallback.
+type AssistantFallbackSaveRequest struct {
 	FallbackChain []string `json:"fallback_chain"`
 }
 
-// VirtualModelRoutingPolicySaveRequest is PUT /api/ui/virtual-models/{id}/routing-policy.
-type VirtualModelRoutingPolicySaveRequest struct {
+// AssistantRoutingPolicySaveRequest is PUT /api/ui/assistants/{id}/routing-policy.
+type AssistantRoutingPolicySaveRequest struct {
 	Enabled           bool   `json:"enabled"`
 	RoutingPolicyYAML string `json:"routing_policy_yaml"`
 }
 
-// VirtualModelToolRouterSaveRequest is PUT /api/ui/virtual-models/{id}/tool-router.
-type VirtualModelToolRouterSaveRequest struct {
+// AssistantToolRouterSaveRequest is PUT /api/ui/assistants/{id}/tool-router.
+type AssistantToolRouterSaveRequest struct {
 	Enabled             bool     `json:"tool_router_enabled"`
 	RouterModels        []string `json:"router_models"`
 	ConfidenceThreshold float64  `json:"confidence_threshold"`
 }
 
-// VirtualModelListResponse is GET /api/ui/virtual-models.
-type VirtualModelListResponse struct {
-	VirtualModels []VirtualModelSummary `json:"virtual_models"`
+// AssistantListResponse is GET /api/ui/assistants.
+type AssistantListResponse struct {
+	Assistants []AssistantSummary `json:"assistants"`
 }
 
-// VirtualModelGenerateRequest is POST /api/ui/virtual-models/{id}/routing/generate.
-type VirtualModelGenerateRequest struct {
+// AssistantGenerateRequest is POST /api/ui/assistants/{id}/routing/generate.
+type AssistantGenerateRequest struct {
 	ProviderPrefix string `json:"provider_prefix,omitempty"`
 	Save           bool   `json:"save"`
 }

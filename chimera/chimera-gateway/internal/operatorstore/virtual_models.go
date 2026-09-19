@@ -33,6 +33,7 @@ type VirtualModel struct {
 	ToolRouterEnabled    bool
 	RouterModels         []string
 	ToolRouterConfidence float64
+	HarnessModules       []HarnessModule
 }
 
 // RoutingRuleDefinition is a reusable routing rule catalog entry.
@@ -48,14 +49,15 @@ type RoutingRuleDefinition struct {
 
 // CreateVirtualModelInput is metadata for a new virtual model (routing filled separately).
 type CreateVirtualModelInput struct {
-	ModelID              string
-	Name                 string
-	Version              string
-	Description          string
-	Visibility           string
-	CreatedByPrincipalID string
-	TenantID             string
-	Enabled              bool
+	ModelID                 string
+	Name                    string
+	Version                 string
+	Description             string
+	Visibility              string
+	CreatedByPrincipalID    string
+	TenantID                string
+	Enabled                 bool
+	DefaultRetrievalEnabled bool // seeds harness retrieval module (gateway RAG on/off)
 }
 
 func normalizeVisibility(v string) string {
@@ -68,7 +70,7 @@ func normalizeVisibility(v string) string {
 
 func (s *Store) countVirtualModels(ctx context.Context) (int, error) {
 	var n int
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM virtual_models`).Scan(&n)
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM assistants`).Scan(&n)
 	return n, err
 }
 
@@ -86,7 +88,7 @@ func (s *Store) ListVirtualModels(ctx context.Context, tenantID, principalID str
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id, model_id, name, version, description, enabled, visibility,
        created_by_principal_id, tenant_id, created_at, updated_at
-FROM virtual_models
+FROM assistants
 WHERE tenant_id = ? OR tenant_id = ''
 ORDER BY id`, tenantID)
 	if err != nil {
@@ -124,7 +126,7 @@ func (s *Store) ListEnabledVirtualModels(ctx context.Context) ([]VirtualModel, e
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id, model_id, name, version, description, enabled, visibility,
        created_by_principal_id, tenant_id, created_at, updated_at
-FROM virtual_models
+FROM assistants
 WHERE enabled = 1
 ORDER BY id`)
 	if err != nil {
@@ -171,7 +173,7 @@ func scanVirtualModelRow(rows *sql.Rows) (VirtualModel, error) {
 func (s *Store) loadVirtualModelRouting(ctx context.Context, vm *VirtualModel) error {
 	var chainJSON string
 	err := s.db.QueryRowContext(ctx, `
-SELECT chain_json FROM virtual_model_fallback WHERE virtual_model_id = ?`, vm.ID).Scan(&chainJSON)
+SELECT chain_json FROM assistant_fallback WHERE assistant_id = ?`, vm.ID).Scan(&chainJSON)
 	if err == sql.ErrNoRows {
 		vm.FallbackChain = nil
 	} else if err != nil {
@@ -183,7 +185,7 @@ SELECT chain_json FROM virtual_model_fallback WHERE virtual_model_id = ?`, vm.ID
 	var polEnabled int
 	var polYAML string
 	err = s.db.QueryRowContext(ctx, `
-SELECT enabled, policy_yaml FROM virtual_model_routing_policy WHERE virtual_model_id = ?`, vm.ID).
+SELECT enabled, policy_yaml FROM assistant_routing_policy WHERE assistant_id = ?`, vm.ID).
 		Scan(&polEnabled, &polYAML)
 	if err == sql.ErrNoRows {
 		vm.RoutingPolicyEnabled = false
@@ -200,7 +202,7 @@ SELECT enabled, policy_yaml FROM virtual_model_routing_policy WHERE virtual_mode
 	var threshold float64
 	err = s.db.QueryRowContext(ctx, `
 SELECT enabled, router_models_json, confidence_threshold
-FROM virtual_model_tool_router WHERE virtual_model_id = ?`, vm.ID).
+FROM assistant_tool_router WHERE assistant_id = ?`, vm.ID).
 		Scan(&trEnabled, &routerJSON, &threshold)
 	if err == sql.ErrNoRows {
 		vm.ToolRouterEnabled = false
@@ -215,7 +217,7 @@ FROM virtual_model_tool_router WHERE virtual_model_id = ?`, vm.ID).
 			_ = json.Unmarshal([]byte(routerJSON), &vm.RouterModels)
 		}
 	}
-	return nil
+	return s.loadVirtualModelHarness(ctx, vm)
 }
 
 // GetVirtualModelByID loads one model by row id and tenant scope.
@@ -229,7 +231,7 @@ func (s *Store) GetVirtualModelByID(ctx context.Context, tenantID string, id int
 	err := s.db.QueryRowContext(ctx, `
 SELECT id, model_id, name, version, description, enabled, visibility,
        created_by_principal_id, tenant_id, created_at, updated_at
-FROM virtual_models WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID).
+FROM assistants WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID).
 		Scan(&vm.ID, &vm.ModelID, &vm.Name, &vm.Version, &desc, &enabled, &vis,
 			&creator, &tid, &ca, &ua)
 	if err == sql.ErrNoRows {
@@ -266,7 +268,7 @@ func (s *Store) GetVirtualModelByModelID(ctx context.Context, modelID string) (*
 	err := s.db.QueryRowContext(ctx, `
 SELECT id, model_id, name, version, description, enabled, visibility,
        created_by_principal_id, tenant_id, created_at, updated_at
-FROM virtual_models WHERE model_id = ?`, modelID).
+FROM assistants WHERE model_id = ?`, modelID).
 		Scan(&vm.ID, &vm.ModelID, &vm.Name, &vm.Version, &desc, &enabled, &vis,
 			&creator, &tenant, &ca, &ua)
 	if err == sql.ErrNoRows {
@@ -313,7 +315,7 @@ func (s *Store) CreateVirtualModel(ctx context.Context, in CreateVirtualModelInp
 		enabled = 0
 	}
 	res, err := tx.ExecContext(ctx, `
-INSERT INTO virtual_models (model_id, name, version, description, enabled, visibility,
+INSERT INTO assistants (model_id, name, version, description, enabled, visibility,
 	created_by_principal_id, tenant_id, created_at, updated_at)
 VALUES (?,?,?,?,?,?,?,?,?,?)`,
 		in.ModelID, in.Name, in.Version, strings.TrimSpace(in.Description), enabled,
@@ -327,18 +329,21 @@ VALUES (?,?,?,?,?,?,?,?,?,?)`,
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO virtual_model_fallback (virtual_model_id, chain_json, updated_at) VALUES (?,?,?)`,
+INSERT INTO assistant_fallback (assistant_id, chain_json, updated_at) VALUES (?,?,?)`,
 		id, "[]", now); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO virtual_model_routing_policy (virtual_model_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)`,
+INSERT INTO assistant_routing_policy (assistant_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)`,
 		id, 0, "", now); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-INSERT INTO virtual_model_tool_router (virtual_model_id, enabled, router_models_json, confidence_threshold, updated_at)
+INSERT INTO assistant_tool_router (assistant_id, enabled, router_models_json, confidence_threshold, updated_at)
 VALUES (?,?,?,?,?)`, id, 0, "[]", 0.5, now); err != nil {
+		return nil, err
+	}
+	if err := s.insertDefaultHarnessModulesTx(ctx, tx, id, in.DefaultRetrievalEnabled, now); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -376,7 +381,7 @@ func (s *Store) UpdateVirtualModelMetadata(ctx context.Context, tenantID string,
 	}
 	now := s.nowRFC3339()
 	res, err := s.db.ExecContext(ctx, `
-UPDATE virtual_models SET name = ?, version = ?, description = ?, enabled = ?, visibility = ?, updated_at = ?
+UPDATE assistants SET name = ?, version = ?, description = ?, enabled = ?, visibility = ?, updated_at = ?
 WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`,
 		w.Name, w.Version, w.Description, boolToInt(en), vis, now, id, tenantID)
 	if err != nil {
@@ -405,7 +410,7 @@ func (s *Store) DeleteVirtualModel(ctx context.Context, tenantID string, id int6
 		return fmt.Errorf("operator store unavailable")
 	}
 	res, err := s.db.ExecContext(ctx, `
-DELETE FROM virtual_models WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID)
+DELETE FROM assistants WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -445,13 +450,13 @@ func (s *Store) SetVirtualModelFallback(ctx context.Context, tenantID string, id
 	}
 	now := s.nowRFC3339()
 	_, err = s.db.ExecContext(ctx, `
-INSERT INTO virtual_model_fallback (virtual_model_id, chain_json, updated_at) VALUES (?,?,?)
-ON CONFLICT(virtual_model_id) DO UPDATE SET chain_json = excluded.chain_json, updated_at = excluded.updated_at`,
+INSERT INTO assistant_fallback (assistant_id, chain_json, updated_at) VALUES (?,?,?)
+ON CONFLICT(assistant_id) DO UPDATE SET chain_json = excluded.chain_json, updated_at = excluded.updated_at`,
 		id, string(b), now)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE virtual_models SET updated_at = ? WHERE id = ?`, now, id)
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
 	return err
 }
 
@@ -469,13 +474,13 @@ func (s *Store) SetVirtualModelRoutingPolicy(ctx context.Context, tenantID strin
 	}
 	now := s.nowRFC3339()
 	_, err = s.db.ExecContext(ctx, `
-INSERT INTO virtual_model_routing_policy (virtual_model_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)
-ON CONFLICT(virtual_model_id) DO UPDATE SET enabled = excluded.enabled, policy_yaml = excluded.policy_yaml, updated_at = excluded.updated_at`,
+INSERT INTO assistant_routing_policy (assistant_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)
+ON CONFLICT(assistant_id) DO UPDATE SET enabled = excluded.enabled, policy_yaml = excluded.policy_yaml, updated_at = excluded.updated_at`,
 		id, boolToInt(enabled), policyYAML, now)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE virtual_models SET updated_at = ? WHERE id = ?`, now, id)
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
 	return err
 }
 
@@ -500,16 +505,16 @@ func (s *Store) SetVirtualModelToolRouter(ctx context.Context, tenantID string, 
 	}
 	now := s.nowRFC3339()
 	_, err = s.db.ExecContext(ctx, `
-INSERT INTO virtual_model_tool_router (virtual_model_id, enabled, router_models_json, confidence_threshold, updated_at)
+INSERT INTO assistant_tool_router (assistant_id, enabled, router_models_json, confidence_threshold, updated_at)
 VALUES (?,?,?,?,?)
-ON CONFLICT(virtual_model_id) DO UPDATE SET enabled = excluded.enabled,
+ON CONFLICT(assistant_id) DO UPDATE SET enabled = excluded.enabled,
 	router_models_json = excluded.router_models_json, confidence_threshold = excluded.confidence_threshold,
 	updated_at = excluded.updated_at`,
 		id, boolToInt(enabled), string(b), threshold, now)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE virtual_models SET updated_at = ? WHERE id = ?`, now, id)
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
 	return err
 }
 
@@ -565,14 +570,15 @@ FROM routing_rule_definitions ORDER BY id`)
 // InsertVirtualModelFull inserts a complete virtual model in one transaction (bootstrap/tests).
 func (s *Store) InsertVirtualModelFull(ctx context.Context, vm VirtualModel) (*VirtualModel, error) {
 	in := CreateVirtualModelInput{
-		ModelID:              vm.ModelID,
-		Name:                 vm.Name,
-		Version:              vm.Version,
-		Description:          vm.Description,
-		Visibility:           vm.Visibility,
-		CreatedByPrincipalID: vm.CreatedByPrincipalID,
-		TenantID:             vm.TenantID,
-		Enabled:              vm.Enabled,
+		ModelID:                 vm.ModelID,
+		Name:                    vm.Name,
+		Version:                 vm.Version,
+		Description:             vm.Description,
+		Visibility:              vm.Visibility,
+		CreatedByPrincipalID:    vm.CreatedByPrincipalID,
+		TenantID:                vm.TenantID,
+		Enabled:                 vm.Enabled,
+		DefaultRetrievalEnabled: true,
 	}
 	created, err := s.CreateVirtualModel(ctx, in)
 	if err != nil {
@@ -594,6 +600,11 @@ func (s *Store) InsertVirtualModelFull(ctx context.Context, vm VirtualModel) (*V
 			th = 0.5
 		}
 		if err := s.SetVirtualModelToolRouter(ctx, vm.TenantID, created.ID, vm.ToolRouterEnabled, vm.RouterModels, th); err != nil {
+			return nil, err
+		}
+	}
+	if len(vm.HarnessModules) > 0 {
+		if err := s.SetVirtualModelHarness(ctx, vm.TenantID, created.ID, vm.HarnessModules); err != nil {
 			return nil, err
 		}
 	}

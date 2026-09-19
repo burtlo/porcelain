@@ -102,7 +102,7 @@ func TestOperatorMessage_gatewaySlugs(t *testing.T) {
 			want: "Completion delivered to the client (this turn finished successfully). · 142 ms",
 		},
 		{
-			name: "routing_virtual",
+			name: "routing_assistant",
 			flat: map[string]any{
 				"msg":           "conversation.routing.resolve",
 				"clientModel":   "Chimera-0.2.0",
@@ -110,7 +110,7 @@ func TestOperatorMessage_gatewaySlugs(t *testing.T) {
 				"attempt":       4,
 				"chainLen":      24,
 			},
-			want: "Routed virtual model Chimera-0.2.0 → llama-4-scout-17b-16e-instruct · attempt 4 of 24.",
+			want: "Routed Assistant Chimera-0.2.0 → llama-4-scout-17b-16e-instruct · attempt 4 of 24.",
 		},
 		{
 			name: "rag_attached_evlog",
@@ -235,14 +235,14 @@ func TestOperatorMessage_gatewaySlugs(t *testing.T) {
 			want: "Blocked by provider limits · groq/compound-mini · body size · 4000000 bytes > cap 3500000",
 		},
 		{
-			name: "catalog_fallback_unavailable_virtual_model",
+			name: "catalog_fallback_unavailable_assistant",
 			flat: map[string]any{
 				"msg":       "gateway.catalog.fallback_unavailable_model",
 				"model_id":  "gemini/gemini-3.1-flash-lite",
-				"source":    "virtual_model:Chimera-0.2.0",
+				"source":    "assistant:Chimera-0.2.0",
 				"tenant_id": "default",
 			},
-			want: "Unavailable model gemini-3.1-flash-lite still listed in Chimera-0.2.0 virtual model fallback chain · tenant default.",
+			want: "Unavailable model gemini-3.1-flash-lite still listed in Chimera-0.2.0 Assistant fallback chain · tenant default.",
 		},
 		{
 			name: "catalog_fallback_unavailable_gateway_chain",

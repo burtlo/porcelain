@@ -20,8 +20,9 @@ func openTestStore(t *testing.T) *Store {
 	return s
 }
 
-func TestVirtualModel_CRUDAndCascade(t *testing.T) {
+func TestAssistantTable_CRUDAndCascade(t *testing.T) {
 	s := openTestStore(t)
+	assertAssistantsSchema(t, s)
 	ctx := context.Background()
 
 	vm, err := s.CreateVirtualModel(ctx, CreateVirtualModelInput{

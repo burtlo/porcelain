@@ -129,7 +129,7 @@ func TestUILoginAndState(t *testing.T) {
 		t.Fatal(err)
 	}
 	gw, _ := st["gateway"].(map[string]any)
-	if gw["virtual_model_id"] != "Chimera-0.1.0" {
+	if gw["assistant_id"] != "Chimera-0.1.0" {
 		t.Fatalf("gateway: %+v", gw)
 	}
 	ov, _ := gw["service_overview"].(map[string]any)
@@ -457,7 +457,7 @@ func TestUISaveOllamaURL_providerMissingEnvelope(t *testing.T) {
 	}
 }
 
-func TestChatVirtualModelFallback429(t *testing.T) {
+func TestChatAssistantFallback429(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 
 	var seenModels []string

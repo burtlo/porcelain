@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/lynn/porcelain/chimera/internal/config"
+	"github.com/lynn/porcelain/internal/naming"
 )
 
 var nonSlugRE = regexp.MustCompile(`[^a-z0-9]+`)
@@ -148,7 +149,7 @@ func EnsureGeminiVirtualModel(ctx context.Context, s *Store, geminiModels []stri
 		return fmt.Errorf("seed gemini virtual model: %w", err)
 	}
 	if log != nil {
-		log.Info("gemini virtual model seeded", "msg", "gateway.virtual_model.gemini_seeded", "model_id", vm.ModelID)
+		log.Info("gemini assistant seeded", "msg", naming.MsgGatewayAssistantGeminiSeeded, "model_id", vm.ModelID)
 	}
 	return nil
 }

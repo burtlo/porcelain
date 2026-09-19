@@ -3,17 +3,17 @@
 | Field | Value |
 |-------|-------|
 | **Doc kind** | `feature-record` |
-| **Areas** | Gateway chat routing, provider limits, virtual model fallback |
+| **Areas** | Gateway chat routing, provider limits, assistant fallback |
 | **Status** | `partial` |
 | **Introduced** | Gateway patch after v0.2 routing baseline (2026-05) |
 | **Originated from** | [`plans/context-window-admission.md`](../plans/context-window-admission.md) |
-| **Related features** | [Operator virtual models](operator-virtual-models.md), [Operator log message registry](operator-log-message-registry.md), [Gateway chat routing pipeline](gateway-chat-routing-pipeline.md) |
+| **Related features** | [Operator assistants](operator-assistants.md), [Operator log message registry](operator-log-message-registry.md), [Gateway chat routing pipeline](gateway-chat-routing-pipeline.md) |
 | **Depends on** | `provider-model-limits.yaml`, token estimator, live catalog snapshot |
 | **Last updated** | See git history |
 
 ## At a glance
 
-Before calling upstream on each virtual-model fallback attempt, the gateway can **deny** models whose context window or body-size cap would be exceeded—similar to existing TPM/RPM guards but without metrics I/O. Limits come from `provider-model-limits.yaml` (`context_window`, `max_prompt_tokens`, `max_body_bytes`, safety factors); YAML values win over live catalog `context_length` overlay when set. Upstream `request_too_large` and `context_length_exceeded` responses trigger **fallback retry** to the next chain entry instead of terminating the client request. Operator logs emit `provider_limits` skips with `reason: context_window`.
+Before calling upstream on each assistant fallback attempt, the gateway can **deny** models whose context window or body-size cap would be exceeded—similar to existing TPM/RPM guards but without metrics I/O. Limits come from `provider-model-limits.yaml` (`context_window`, `max_prompt_tokens`, `max_body_bytes`, safety factors); YAML values win over live catalog `context_length` overlay when set. Upstream `request_too_large` and `context_length_exceeded` responses trigger **fallback retry** to the next chain entry instead of terminating the client request. Operator logs emit `provider_limits` skips with `reason: context_window`.
 
 ## Operator-visible behavior
 
@@ -73,7 +73,7 @@ go test ./chimera/chimera-gateway/internal/chat/ -run 'Context|request_too_large
 go test ./chimera/internal/providerlimits/...
 ```
 
-Manual: send oversized prompt through VM with mixed Groq + Ollama chain; confirm Groq context skips in logs and Ollama attempt succeeds.
+Manual: send oversized prompt through an assistant with mixed Groq + Ollama chain; confirm Groq context skips in logs and Ollama attempt succeeds.
 
 ## Out of scope and known gaps
 
@@ -86,4 +86,4 @@ Manual: send oversized prompt through VM with mixed Groq + Ollama chain; confirm
 
 - Plan: [`plans/context-window-admission.md`](../plans/context-window-admission.md)
 - Example limits: [`config/provider-model-limits.example.yaml`](../../config/provider-model-limits.example.yaml)
-- Virtual model fallback: [Operator virtual models](operator-virtual-models.md)
+- Assistant fallback: [Operator assistants](operator-assistants.md)

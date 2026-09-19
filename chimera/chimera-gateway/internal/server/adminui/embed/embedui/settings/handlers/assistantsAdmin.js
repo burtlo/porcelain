@@ -1,12 +1,12 @@
 /**
- * Virtual model card actions (per-model routing stack).
- * Exports: ChimeraSettings.Handlers.VirtualModels.wire(ctx)
+ * Assistant card actions (per-model routing stack).
+ * Exports: ChimeraSettings.Handlers.Assistants.wire(ctx)
  */
 globalThis.ChimeraSettings = globalThis.ChimeraSettings || {};
 globalThis.ChimeraSettings.Handlers = globalThis.ChimeraSettings.Handlers || {};
-globalThis.ChimeraSettings.Handlers.VirtualModels = globalThis.ChimeraSettings.Handlers.VirtualModels || {};
+globalThis.ChimeraSettings.Handlers.Assistants = globalThis.ChimeraSettings.Handlers.Assistants || {};
 
-globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
+globalThis.ChimeraSettings.Handlers.Assistants.wire = function (ctx) {
   var adminPostJSON = ctx.adminPostJSON;
   var adminPutJSON = ctx.adminPutJSON;
   var adminSetMessage = ctx.adminSetMessage;
@@ -16,12 +16,12 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   var fallbackChainToYAML = ctx.fallbackChainToYAML;
   var refreshSummarizedPanel = ctx.refreshSummarizedPanel;
   var forceSummarizedFullRebuild = ctx.forceSummarizedFullRebuild;
-  var removeVirtualModelFromSummarizedFeed = ctx.removeVirtualModelFromSummarizedFeed;
-  var fetchVirtualModelDetail = ctx.fetchVirtualModelDetail;
-  var patchVirtualModelCard = ctx.patchVirtualModelCard;
-  var syncVirtualModelCardHeader = ctx.syncVirtualModelCardHeader;
-  var syncVirtualModelDraftCardChrome = ctx.syncVirtualModelDraftCardChrome;
-  var buildVirtualModelDraftCardHtml = ctx.buildVirtualModelDraftCardHtml;
+  var removeAssistantFromSummarizedFeed = ctx.removeAssistantFromSummarizedFeed;
+  var fetchAssistantDetail = ctx.fetchAssistantDetail;
+  var patchAssistantCard = ctx.patchAssistantCard;
+  var syncAssistantCardHeader = ctx.syncAssistantCardHeader;
+  var syncAssistantDraftCardChrome = ctx.syncAssistantDraftCardChrome;
+  var buildAssistantDraftCardHtml = ctx.buildAssistantDraftCardHtml;
   var scheduleStoryRebuild = ctx.scheduleStoryRebuild;
 
   var AA = globalThis.ChimeraShared && globalThis.ChimeraShared.AdminAction;
@@ -43,9 +43,9 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
 
   function vmUi(id) {
     var key = String(id);
-    if (!ctx.virtualModelUi) ctx.virtualModelUi = {};
-    if (!ctx.virtualModelUi[key]) {
-      ctx.virtualModelUi[key] = {
+    if (!ctx.assistantUi) ctx.assistantUi = {};
+    if (!ctx.assistantUi[key]) {
+      ctx.assistantUi[key] = {
         panelOpen: false,
         hydrated: false,
         detailLoading: false,
@@ -66,7 +66,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         sectionOpen: { identity: true, fallback: true }
       };
     }
-    return ctx.virtualModelUi[key];
+    return ctx.assistantUi[key];
   }
 
   function vmSectionKeepOpen(ui, sectionKey) {
@@ -75,7 +75,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   }
 
   function vmCardEl(vmId) {
-    return document.getElementById("virtual-model-" + String(vmId));
+    return document.getElementById("assistant-" + String(vmId));
   }
 
   function vmPanelOpen(vmId) {
@@ -84,15 +84,15 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   }
 
   function vmDetail(id) {
-    if (!ctx.virtualModelDetails) return null;
-    return ctx.virtualModelDetails[String(id)] || null;
+    if (!ctx.assistantDetails) return null;
+    return ctx.assistantDetails[String(id)] || null;
   }
 
   function reloadVm(vmId) {
     var ui = vmUi(vmId);
     ui.hydrated = false;
     return Promise.all([
-      fetchVirtualModelDetail(vmId, true),
+      fetchAssistantDetail(vmId, true),
       fetchAdminState(),
       fetchAdminTokens()
     ]).then(function () {
@@ -102,7 +102,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   }
 
   function patchVm(vmId, opts) {
-    if (typeof patchVirtualModelCard === "function" && patchVirtualModelCard(vmId, opts)) return;
+    if (typeof patchAssistantCard === "function" && patchAssistantCard(vmId, opts)) return;
     refreshSummarizedPanel();
   }
 
@@ -148,30 +148,30 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   }
 
   function lookupVmDraft(draftId) {
-    if (!ctx.virtualModelDrafts) return null;
-    for (var i = 0; i < ctx.virtualModelDrafts.length; i++) {
-      if (ctx.virtualModelDrafts[i] && String(ctx.virtualModelDrafts[i].id) === String(draftId)) {
-        return ctx.virtualModelDrafts[i];
+    if (!ctx.assistantDrafts) return null;
+    for (var i = 0; i < ctx.assistantDrafts.length; i++) {
+      if (ctx.assistantDrafts[i] && String(ctx.assistantDrafts[i].id) === String(draftId)) {
+        return ctx.assistantDrafts[i];
       }
     }
     return null;
   }
 
   function syncVmDraftChromeFromDom(draftId) {
-    var card = document.getElementById("virtual-model-draft-" + String(draftId));
+    var card = document.getElementById("assistant-draft-" + String(draftId));
     var draft = lookupVmDraft(draftId);
-    if (!card || !draft || typeof syncVirtualModelDraftCardChrome !== "function") return;
-    syncVirtualModelDraftCardChrome(card, draft);
+    if (!card || !draft || typeof syncAssistantDraftCardChrome !== "function") return;
+    syncAssistantDraftCardChrome(card, draft);
   }
 
   function patchVmDraftCard(draftId) {
-    if (!ctx.virtualModelDrafts || typeof buildVirtualModelDraftCardHtml !== "function") return false;
+    if (!ctx.assistantDrafts || typeof buildAssistantDraftCardHtml !== "function") return false;
     var draft = lookupVmDraft(draftId);
     if (!draft || typeof ctx.replaceCardById !== "function") return false;
     return ctx.replaceCardById(
-      "virtual-model-draft-" + String(draftId),
+      "assistant-draft-" + String(draftId),
       function () {
-        return buildVirtualModelDraftCardHtml(draft);
+        return buildAssistantDraftCardHtml(draft);
       },
       { preserveOpen: false }
     );
@@ -179,9 +179,9 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
 
   function refreshVmDraftUi() {
     var patched = false;
-    if (ctx.virtualModelDrafts && ctx.virtualModelDrafts.length) {
-      for (var i = 0; i < ctx.virtualModelDrafts.length; i++) {
-        if (ctx.virtualModelDrafts[i] && patchVmDraftCard(ctx.virtualModelDrafts[i].id)) patched = true;
+    if (ctx.assistantDrafts && ctx.assistantDrafts.length) {
+      for (var i = 0; i < ctx.assistantDrafts.length; i++) {
+        if (ctx.assistantDrafts[i] && patchVmDraftCard(ctx.assistantDrafts[i].id)) patched = true;
       }
     }
     if (!patched && typeof scheduleStoryRebuild === "function") scheduleStoryRebuild();
@@ -189,12 +189,12 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
   }
 
   function vmApiPath(vmId, suffix) {
-    return "/api/ui/virtual-models/" + String(vmId) + (suffix || "");
+    return "/api/ui/assistants/" + String(vmId) + (suffix || "");
   }
 
   function lookupVmSummary(vmId) {
     var gw = ctx.adminStateCache && ctx.adminStateCache.gateway;
-    var vms = gw && gw.virtual_models && Array.isArray(gw.virtual_models) ? gw.virtual_models : [];
+    var vms = gw && gw.assistants && Array.isArray(gw.assistants) ? gw.assistants : [];
     for (var i = 0; i < vms.length; i++) {
       if (vms[i] && Number(vms[i].id) === Number(vmId)) return vms[i];
     }
@@ -231,19 +231,19 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
 
   function syncVmHeaderFromDom(vmId) {
     var card = vmCardEl(vmId);
-    if (!card || typeof syncVirtualModelCardHeader !== "function") return;
-    syncVirtualModelCardHeader(card, vmHeaderFieldsFromDom(vmId));
+    if (!card || typeof syncAssistantCardHeader !== "function") return;
+    syncAssistantCardHeader(card, vmHeaderFieldsFromDom(vmId));
   }
 
-  if (!globalThis.__ChimeraSettingsVirtualModelsUiWired) {
-    globalThis.__ChimeraSettingsVirtualModelsUiWired = true;
+  if (!globalThis.__ChimeraSettingsAssistantsUiWired) {
+    globalThis.__ChimeraSettingsAssistantsUiWired = true;
 
     document.body.addEventListener("toggle", function (ev) {
       var det = ev.target;
-      if (!det || det.tagName !== "DETAILS" || !det.classList || !det.classList.contains("sum-card--virtual-model")) {
+      if (!det || det.tagName !== "DETAILS" || !det.classList || !det.classList.contains("sum-card--assistant")) {
         return;
       }
-      var vmId = Number(String(det.getAttribute("data-virtual-model-id") || "").trim());
+      var vmId = Number(String(det.getAttribute("data-assistant-id") || "").trim());
       if (!vmId) return;
       var ui = vmUi(vmId);
       if (!det.open) {
@@ -251,11 +251,11 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         return;
       }
       ui.panelOpen = true;
-      if (ui.hydrated && ctx.virtualModelDetails && ctx.virtualModelDetails[String(vmId)]) {
+      if (ui.hydrated && ctx.assistantDetails && ctx.assistantDetails[String(vmId)]) {
         return;
       }
-      if (typeof fetchVirtualModelDetail !== "function") return;
-      fetchVirtualModelDetail(vmId, false)
+      if (typeof fetchAssistantDetail !== "function") return;
+      fetchAssistantDetail(vmId, false)
         .then(function () {
           if (!ui.panelOpen || !vmPanelOpen(vmId)) return;
           patchVm(vmId, { onlyIfOpen: true });
@@ -271,9 +271,9 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
       if (!det || det.tagName !== "DETAILS" || !det.classList || !det.classList.contains("sum-vm-section")) {
         return;
       }
-      var card = det.closest && det.closest(".sum-card--virtual-model");
+      var card = det.closest && det.closest(".sum-card--assistant");
       if (!card) return;
-      var vmId = Number(String(card.getAttribute("data-virtual-model-id") || "").trim());
+      var vmId = Number(String(card.getAttribute("data-assistant-id") || "").trim());
       if (!vmId) return;
       var key = String(det.getAttribute("data-vm-section") || "").trim();
       if (!key) return;
@@ -290,10 +290,10 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         var draftField = t.getAttribute && t.getAttribute("data-vm-draft-field");
         if (draftField) {
           var draftId = Number(String(t.getAttribute("data-vm-draft-id") || "").trim());
-          if (!draftId || !ctx.virtualModelDrafts) return;
-          for (var di = 0; di < ctx.virtualModelDrafts.length; di++) {
-            if (ctx.virtualModelDrafts[di] && Number(ctx.virtualModelDrafts[di].id) === draftId) {
-              ctx.virtualModelDrafts[di][draftField] =
+          if (!draftId || !ctx.assistantDrafts) return;
+          for (var di = 0; di < ctx.assistantDrafts.length; di++) {
+            if (ctx.assistantDrafts[di] && Number(ctx.assistantDrafts[di].id) === draftId) {
+              ctx.assistantDrafts[di][draftField] =
                 t.tagName === "SELECT" ? String(t.value || "") : String(t.value != null ? t.value : "");
               syncVmDraftChromeFromDom(draftId);
               break;
@@ -352,14 +352,14 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
       t = actionEl;
 
       if (act === "vm-add") {
-        if (ctx.virtualModelDrafts && ctx.virtualModelDrafts.length > 0) {
-          adminSetMessage("err", "Finish or cancel the current draft virtual model first.");
+        if (ctx.assistantDrafts && ctx.assistantDrafts.length > 0) {
+          adminSetMessage("err", "Finish or cancel the current draft assistant first.");
           return;
         }
-        if (!ctx.virtualModelDrafts) ctx.virtualModelDrafts = [];
-        var nextId = ctx.nextVirtualModelDraftId != null ? Number(ctx.nextVirtualModelDraftId) : 1;
-        ctx.nextVirtualModelDraftId = nextId + 1;
-        ctx.virtualModelDrafts.unshift({
+        if (!ctx.assistantDrafts) ctx.assistantDrafts = [];
+        var nextId = ctx.nextAssistantDraftId != null ? Number(ctx.nextAssistantDraftId) : 1;
+        ctx.nextAssistantDraftId = nextId + 1;
+        ctx.assistantDrafts.unshift({
           id: nextId,
           name: "",
           version: "",
@@ -378,12 +378,12 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         var dCancel = Number(String(t.getAttribute("data-vm-draft-id") || "").trim());
         if (!dCancel) return;
         var kept = [];
-        for (var dc = 0; dc < (ctx.virtualModelDrafts || []).length; dc++) {
-          if (!ctx.virtualModelDrafts[dc] || Number(ctx.virtualModelDrafts[dc].id) !== dCancel) {
-            kept.push(ctx.virtualModelDrafts[dc]);
+        for (var dc = 0; dc < (ctx.assistantDrafts || []).length; dc++) {
+          if (!ctx.assistantDrafts[dc] || Number(ctx.assistantDrafts[dc].id) !== dCancel) {
+            kept.push(ctx.assistantDrafts[dc]);
           }
         }
-        ctx.virtualModelDrafts = kept;
+        ctx.assistantDrafts = kept;
         adminSetMessage("", "");
         if (typeof scheduleStoryRebuild === "function") scheduleStoryRebuild();
         else refreshSummarizedPanel();
@@ -394,9 +394,9 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         var dSave = Number(String(t.getAttribute("data-vm-draft-id") || "").trim());
         if (!dSave) return;
         var draftSave = null;
-        for (var ds = 0; ds < (ctx.virtualModelDrafts || []).length; ds++) {
-          if (ctx.virtualModelDrafts[ds] && Number(ctx.virtualModelDrafts[ds].id) === dSave) {
-            draftSave = ctx.virtualModelDrafts[ds];
+        for (var ds = 0; ds < (ctx.assistantDrafts || []).length; ds++) {
+          if (ctx.assistantDrafts[ds] && Number(ctx.assistantDrafts[ds].id) === dSave) {
+            draftSave = ctx.assistantDrafts[ds];
             break;
           }
         }
@@ -420,16 +420,16 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         };
         var customMid = String(draftSave.model_id || "").trim();
         if (customMid) createBody.model_id = customMid;
-        (adminPostJSON || adminPutJSON)("/api/ui/virtual-models", createBody)
+        (adminPostJSON || adminPutJSON)("/api/ui/assistants", createBody)
           .then(function () {
             var keepSave = [];
-            for (var di2 = 0; di2 < (ctx.virtualModelDrafts || []).length; di2++) {
-              if (!ctx.virtualModelDrafts[di2] || Number(ctx.virtualModelDrafts[di2].id) !== dSave) {
-                keepSave.push(ctx.virtualModelDrafts[di2]);
+            for (var di2 = 0; di2 < (ctx.assistantDrafts || []).length; di2++) {
+              if (!ctx.assistantDrafts[di2] || Number(ctx.assistantDrafts[di2].id) !== dSave) {
+                keepSave.push(ctx.assistantDrafts[di2]);
               }
             }
-            ctx.virtualModelDrafts = keepSave;
-            adminSetMessage("", "Virtual model created.");
+            ctx.assistantDrafts = keepSave;
+            adminSetMessage("", "Assistant created.");
             return Promise.all([
               typeof fetchAdminState === "function" ? fetchAdminState() : Promise.resolve(),
               typeof fetchAdminTokens === "function" ? fetchAdminTokens() : Promise.resolve()
@@ -473,7 +473,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         var vmSummary = lookupVmSummary(vmId) || det || {};
         var vmLabel = String(vmSummary.model_id || vmSummary.name || "").trim();
         var confirmMsg =
-          "Delete this virtual model" +
+          "Delete this assistant" +
           (vmLabel ? ' "' + vmLabel + '"' : "") +
           " from configuration? Clients will no longer be able to route through it.";
         if (!window.confirm(confirmMsg)) {
@@ -487,12 +487,12 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
             });
           })
           .then(function () {
-            adminSetMessage("", "Virtual model removed.");
-            if (typeof removeVirtualModelFromSummarizedFeed === "function") {
-              removeVirtualModelFromSummarizedFeed(vmId);
+            adminSetMessage("", "Assistant removed.");
+            if (typeof removeAssistantFromSummarizedFeed === "function") {
+              removeAssistantFromSummarizedFeed(vmId);
             } else {
-              if (ctx.virtualModelDetails) delete ctx.virtualModelDetails[String(vmId)];
-              if (ctx.virtualModelUi) delete ctx.virtualModelUi[String(vmId)];
+              if (ctx.assistantDetails) delete ctx.assistantDetails[String(vmId)];
+              if (ctx.assistantUi) delete ctx.assistantUi[String(vmId)];
             }
             if (document.activeElement && document.activeElement.blur) {
               try {
@@ -586,13 +586,13 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
       }
 
       if (act === "vm-identity-refresh") {
-        fetchVirtualModelDetail(vmId, true).then(function () {
+        fetchAssistantDetail(vmId, true).then(function () {
           patchVm(vmId);
         });
         return;
       }
       if (act === "vm-fallback-refresh") {
-        fetchVirtualModelDetail(vmId, true).then(function () {
+        fetchAssistantDetail(vmId, true).then(function () {
           ui.fallbackTouched = false;
           ui.fallbackDraft = null;
           patchVm(vmId);
@@ -600,7 +600,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         return;
       }
       if (act === "vm-routing-refresh") {
-        fetchVirtualModelDetail(vmId, true).then(function () {
+        fetchAssistantDetail(vmId, true).then(function () {
           ui.policyTouched = false;
           ui.policyDraft = String((vmDetail(vmId) && vmDetail(vmId).routing_policy_yaml) || "");
           patchVm(vmId);
@@ -608,7 +608,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         return;
       }
       if (act === "vm-router-refresh") {
-        fetchVirtualModelDetail(vmId, true).then(function () {
+        fetchAssistantDetail(vmId, true).then(function () {
           ui.routerModelsTouched = false;
           ui.routerThresholdTouched = false;
           ui.routerEnabledTouched = false;
@@ -630,7 +630,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         else idPut.visibility = nextOn ? "public" : "private";
         (adminPutJSON || adminPostJSON)(vmApiPath(vmId), idPut)
           .then(function () {
-            adminSetMessage("", act === "vm-identity-enabled-toggle" ? "Virtual model " + (nextOn ? "enabled." : "disabled.") : "Visibility set to " + idPut.visibility + ".");
+            adminSetMessage("", act === "vm-identity-enabled-toggle" ? "Assistant " + (nextOn ? "enabled." : "disabled.") : "Visibility set to " + idPut.visibility + ".");
             return reloadVm(vmId);
           })
           .catch(function (e) {
@@ -693,7 +693,7 @@ globalThis.ChimeraSettings.Handlers.VirtualModels.wire = function (ctx) {
         (adminPutJSON || adminPostJSON)(vmApiPath(vmId), body)
           .then(function () {
             ui.identityEditing = false;
-            adminSetMessage("", "Virtual model identity saved.");
+            adminSetMessage("", "Assistant identity saved.");
             return reloadVm(vmId);
           })
           .catch(function (e) {

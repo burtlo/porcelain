@@ -121,19 +121,19 @@ globalThis.ChimeraSettings.Summarized.Model = globalThis.ChimeraSettings.Summari
       );
     }
     var gw = (state.adminStateCache && state.adminStateCache.gateway) || {};
-    var vms = gw.virtual_models && Array.isArray(gw.virtual_models) ? gw.virtual_models : [];
+    var vms = gw.assistants && Array.isArray(gw.assistants) ? gw.assistants : [];
     var vmDrafts =
-      state.virtualModelDrafts && Array.isArray(state.virtualModelDrafts) ? state.virtualModelDrafts : [];
-    if (deps.virtualModelsSectionBreakHtml) {
-      pushSectionBreak(cards, deps.virtualModelsSectionBreakHtml(vms.length), "05-virtual-models-label");
+      state.assistantDrafts && Array.isArray(state.assistantDrafts) ? state.assistantDrafts : [];
+    if (deps.assistantsSectionBreakHtml) {
+      pushSectionBreak(cards, deps.assistantsSectionBreakHtml(vms.length), "05-assistants-label");
     }
     for (var vdi = 0; vdi < vmDrafts.length; vdi++) {
       var vdraft = vmDrafts[vdi];
       if (!vdraft || vdraft.id == null) continue;
       cards.push(
         makeCard(
-          "virtual-model-draft-" + String(vdraft.id),
-          "virtual-model-draft",
+          "assistant-draft-" + String(vdraft.id),
+          "assistant-draft",
           SECTION_OVERVIEW,
           "05-vm-draft-" + String(vdraft.id),
           { draftId: vdraft.id, name: vdraft.name, version: vdraft.version },
@@ -146,8 +146,8 @@ globalThis.ChimeraSettings.Summarized.Model = globalThis.ChimeraSettings.Summari
       var vm = vms[vi];
       cards.push(
         makeCard(
-          "virtual-model-" + String(vm.id),
-          "virtual-model",
+          "assistant-" + String(vm.id),
+          "assistant",
           SECTION_OVERVIEW,
           "05-vm-" + String(vm.id),
           {

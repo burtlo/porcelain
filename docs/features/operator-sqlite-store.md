@@ -7,19 +7,19 @@
 | **Status** | `current` |
 | **Introduced** | Indexer workspaces Phase 1+ |
 | **Originated from** | [`plans/indexer-workspaces-sqlite-gateway-api.md`](../plans/indexer-workspaces-sqlite-gateway-api.md), [`virtual-models-operator.md`](../plans/virtual-models-operator.md) |
-| **Related features** | [Indexer workspaces](indexer-workspaces.md), [Operator virtual models](operator-virtual-models.md), [Operator provider model availability](operator-provider-model-availability.md), [Operator conversation history](operator-conversation-history.md) |
+| **Related features** | [Indexer workspaces](indexer-workspaces.md), [Operator assistants](operator-assistants.md), [Operator provider model availability](operator-provider-model-availability.md), [Operator conversation history](operator-conversation-history.md) |
 | **Depends on** | Gateway runtime path for `operator.sqlite` |
 | **Last updated** | See git history |
 
 ## At a glance
 
-Operator configuration and durable UI data live in a single **SQLite** database (`operator.sqlite`) opened by the gateway at startup. Versioned SQL migrations under `migrations/chimera-gateway/operator/` apply idempotently; the indexer **never** opens this file — it reads workspaces via HTTP. Feature packages use `internal/operatorstore` for typed CRUD (workspaces, virtual models, provider model availability, conversations).
+Operator configuration and durable UI data live in a single **SQLite** database (`operator.sqlite`) opened by the gateway at startup. Versioned SQL migrations under `migrations/chimera-gateway/operator/` apply idempotently; the indexer **never** opens this file — it reads workspaces via HTTP. Feature packages use `internal/operatorstore` for typed CRUD (workspaces, assistants, provider model availability, conversations).
 
 ## Operator-visible behavior
 
-- Workspace rows, virtual models, provider toggles, and saved chat threads survive gateway restarts.
-- Settings cards reflect DB state; saving does not rewrite `gateway.yaml` for workspaces or virtual models.
-- First-run bootstrap may seed virtual models and provider availability from YAML (see store bootstrap helpers).
+- Workspace rows, assistants, provider toggles, and saved chat threads survive gateway restarts.
+- Settings cards reflect DB state; saving does not rewrite `gateway.yaml` for workspaces or assistants.
+- First-run bootstrap may seed assistants and provider availability from YAML (see store bootstrap helpers).
 
 ## System behavior and contracts
 
@@ -35,7 +35,8 @@ Operator configuration and durable UI data live in a single **SQLite** database 
 | Migration | Domain |
 |-----------|--------|
 | `000001_workspaces` | Indexer workspaces + paths |
-| `000002_virtual_models` | Virtual model definitions and routing attachments |
+| `000002_virtual_models` | Assistant definitions and routing attachments (legacy migration name) |
+| `000011_assistants` | Rename `virtual_models` → `assistants` and `virtual_model_id` → `assistant_id` |
 | `000003_provider_model_availability` | Per-tenant upstream model toggles |
 | `000004_conversation_history` | Chat threads, messages, RAG hit metadata |
 
@@ -44,7 +45,7 @@ Operator configuration and durable UI data live in a single **SQLite** database 
 | Topic | Decision |
 |-------|----------|
 | Store API | `operatorstore.Open(path, migrationsDir, log)` |
-| Bootstrap | `operatorstore` bootstrap imports legacy YAML VM stack on first run |
+| Bootstrap | `operatorstore` bootstrap imports legacy YAML assistant stack on first run |
 | Metrics DB | Separate SQLite under `migrations/chimera-gateway/metrics/` (not operator store) |
 
 ## Interfaces
@@ -61,7 +62,7 @@ Operator configuration and durable UI data live in a single **SQLite** database 
 |---------|----------|
 | Open + migrations | `internal/operatorstore/store.go`, `migrate.go` |
 | Workspaces | `internal/operatorstore/store.go` (workspace CRUD) |
-| Virtual models | `internal/operatorstore/virtual_models.go` |
+| Assistants | `internal/operatorstore/virtual_models.go` |
 | Provider availability | `internal/operatorstore/provider_models.go`, `provider_models_bootstrap.go` |
 | Conversations | `internal/operatorstore/conversations.go` |
 | Runtime wiring | `internal/server/runtime/` |
@@ -80,4 +81,5 @@ go test ./chimera/chimera-gateway/internal/operatorstore/...
 ## References
 
 - Workspace plan: [`indexer-workspaces-sqlite-gateway-api.md`](../plans/indexer-workspaces-sqlite-gateway-api.md)
-- Virtual models plan: [`virtual-models-operator.md`](../plans/virtual-models-operator.md)
+- Assistants plan: [`virtual-models-operator.md`](../plans/virtual-models-operator.md)
+- Assistants feature: [Operator assistants](operator-assistants.md)

@@ -596,11 +596,11 @@ html[data-theme="design-01"] .sg-op-provider-panel {
   width: 100%;
   max-width: var(--embed-container-max, 80rem);
 }
-.sg-op-virtual-models-section {
+.sg-op-assistants-section {
   width: 100%;
   max-width: var(--embed-container-max, 80rem);
 }
-html[data-theme="design-01"] #panel-summarized .sum-card + .sg-op-virtual-models-section {
+html[data-theme="design-01"] #panel-summarized .sum-card + .sg-op-assistants-section {
   margin-top: 2.5rem;
 }
 .sg-op-provider-picker {
@@ -1398,8 +1398,8 @@ tr.sg-op-vm-fallback-row--unavailable td {
   color: var(--embed-semantic-error-fg);
 }
 
-/* Virtual model card — nested routing stack sections */
-.sum-body--virtual-model {
+/* Assistant card — nested routing stack sections */
+.sum-body--assistant {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1420,7 +1420,7 @@ tr.sg-op-vm-fallback-row--unavailable td {
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
 }
-.sum-body--virtual-model > .sum-vm-section:first-child {
+.sum-body--assistant > .sum-vm-section:first-child {
   border-top: 0;
 }
 .sum-vm-section > summary.sum-vm-section__hdr,
@@ -1677,11 +1677,11 @@ tr.sg-op-vm-fallback-row--unavailable td {
   margin-top: 0.35rem;
 }
 
-/* Virtual model create draft (matches workspace-draft title bar pattern) */
-.sum-card.sum-card--virtual-model-draft > header.sum-card__workspace-draft-hdr {
+/* Assistant create draft (matches workspace-draft title bar pattern) */
+.sum-card.sum-card--assistant-draft > header.sum-card__workspace-draft-hdr {
   border-bottom: 1px solid var(--embed-border-summary-open);
 }
-.sum-card.sum-card--virtual-model-draft > .sum-body {
+.sum-card.sum-card--assistant-draft > .sum-body {
   background: var(--embed-body-tint-svc-gw, var(--embed-body-tint-c));
 }
 .ws-draft-field--wide {

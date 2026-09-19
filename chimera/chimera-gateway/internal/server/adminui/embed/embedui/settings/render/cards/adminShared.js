@@ -774,7 +774,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminShared = function (ctx) {
       var msg = String(f.msg || f.message || "").toLowerCase();
       var hit = false;
       if (want === "rules") {
-        hit = msg.indexOf("routing") >= 0 || msg.indexOf("virtual model") >= 0;
+        hit = msg.indexOf("routing") >= 0 || msg.indexOf("assistant") >= 0;
       } else if (want === "fallback") {
         hit = msg.indexOf("fallback") >= 0 || msg.indexOf("failover") >= 0;
       } else if (want === "router") {

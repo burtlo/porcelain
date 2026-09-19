@@ -21,7 +21,7 @@ Operator embed surfaces must remain readable on phone-width viewports (~390px CS
 
 - **Settings card summary (≤480px viewport, open or closed)** — Two columns: small avatar; title, subtitle, and metrics/pills in the content column (shared left edge with title). Pills flow in a left-aligned row and wrap only when they no longer fit. Chevron is overlaid on the right edge and does not consume a grid column.
 - **Scoped event log (all widths)** — Table headers are **Time** and **Message** only. Stacked time + short date (no year). Message cell: fixed-height meta row (chips) then text row.
-- **Virtual model toggles (≤480px)** — Enabled and Visibility stack with labels; identity KV single column.
+- **Assistant toggles (≤480px)** — Enabled and Visibility stack with labels; identity KV single column.
 
 ### Chat + shell (Phase 2)
 

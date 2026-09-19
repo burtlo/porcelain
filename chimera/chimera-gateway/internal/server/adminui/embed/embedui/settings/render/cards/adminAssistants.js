@@ -1,11 +1,11 @@
 /**
- * Virtual model cards for /ui/settings summarized feed (sectioned routing stack).
+ * Assistant cards for /ui/settings summarized feed (sectioned routing stack).
  */
 globalThis.ChimeraSettings = globalThis.ChimeraSettings || {};
 globalThis.ChimeraSettings.Render = globalThis.ChimeraSettings.Render || {};
 globalThis.ChimeraSettings.Render.Cards = globalThis.ChimeraSettings.Render.Cards || {};
 
-globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx) {
+globalThis.ChimeraSettings.Render.Cards.mountAdminAssistants = function (ctx) {
   var escapeHtml = ctx.escapeHtml;
   var formatInt = typeof ctx.formatInt === "function" ? ctx.formatInt : function (n) { return String(n); };
   var operatorCardChevronHtml = ctx.operatorCardChevronHtml;
@@ -23,9 +23,9 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
 
   function vmUi(ctx, id) {
     var key = String(id);
-    if (!ctx.virtualModelUi) ctx.virtualModelUi = {};
-    if (!ctx.virtualModelUi[key]) {
-      ctx.virtualModelUi[key] = {
+    if (!ctx.assistantUi) ctx.assistantUi = {};
+    if (!ctx.assistantUi[key]) {
+      ctx.assistantUi[key] = {
         panelOpen: false,
         hydrated: false,
         detailLoading: false,
@@ -46,7 +46,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         sectionOpen: { identity: true, fallback: true }
       };
     }
-    return ctx.virtualModelUi[key];
+    return ctx.assistantUi[key];
   }
 
   function vmSectionOpenAttr(ui, sectionKey) {
@@ -111,7 +111,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
       actions += vmToolbarIconBtn(
         editOpts.deleteAction,
         vmId,
-        editOpts.deleteTitle || "Delete virtual model",
+        editOpts.deleteTitle || "Delete assistant",
         "delete_forever",
         "vm-identity-btn-delete"
       );
@@ -138,8 +138,8 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
   }
 
   function vmDetail(ctx, id) {
-    if (!ctx.virtualModelDetails) return null;
-    return ctx.virtualModelDetails[String(id)] || null;
+    if (!ctx.assistantDetails) return null;
+    return ctx.assistantDetails[String(id)] || null;
   }
 
   function mergeVm(summary, detail) {
@@ -162,13 +162,13 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     return out;
   }
 
-  function adminScopedEventsForVirtualModel(modelId) {
+  function adminScopedEventsForAssistant(modelId) {
     modelId = String(modelId || "").trim();
     var out = [];
     for (var i = entryCache.length - 1; i >= 0 && out.length < 18; i--) {
       var ev = entryCache[i];
       var f = getFlat(ev.parsed);
-      var vmField = String(f.virtual_model_id || "").trim();
+      var vmField = String(f.assistant_id || "").trim();
       if (modelId && vmField && vmField !== modelId) continue;
       var msg = String(f.msg || f.message || "").toLowerCase();
       if (
@@ -177,7 +177,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         msg.indexOf("failover") >= 0 ||
         msg.indexOf("tool_router") >= 0 ||
         msg.indexOf("tool-router") >= 0 ||
-        msg.indexOf("virtual model") >= 0
+        msg.indexOf("assistant") >= 0
       ) {
         out.push(ev);
       }
@@ -203,7 +203,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     if (name) return name;
     if (version) return version;
     var modelId = String(vm.model_id != null ? vm.model_id : "").trim();
-    return modelId || "Virtual model";
+    return modelId || "Assistant";
   }
 
   function vmCardSubtitleText(vm) {
@@ -214,7 +214,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     return vmEnabledPill(vm) + vmVisibilityPill(vm);
   }
 
-  function syncVirtualModelCardHeader(cardEl, vm) {
+  function syncAssistantCardHeader(cardEl, vm) {
     if (!cardEl || !vm) return;
     var titleEl = cardEl.querySelector(".sum-main .sum-title");
     var subEl = cardEl.querySelector(".sum-main .sum-sub");
@@ -336,12 +336,12 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
   function buildClientUsageBlock(vm, pfx, loading) {
     if (loading) {
       return (
-        '<div class="sum-vm-section sum-vm-section--bar" data-ui-part="virtual-model.client-usage">' +
+        '<div class="sum-vm-section sum-vm-section--bar" data-ui-part="assistant.client-usage">' +
         '<div class="sum-vm-section__hdr sum-vm-section__hdr--bar"><p class="muted">Loading…</p></div></div>'
       );
     }
     return (
-      '<div class="sum-vm-section sum-vm-section--bar" data-ui-part="virtual-model.client-usage">' +
+      '<div class="sum-vm-section sum-vm-section--bar" data-ui-part="assistant.client-usage">' +
       '<div class="sum-vm-section__hdr sum-vm-section__hdr--bar" aria-label="Model access">' +
       '<span class="sum-vm-section__hdr-row">' +
       '<span class="sum-vm-section__trail">' +
@@ -413,7 +413,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         vmSectionToolbarHtml(vm, "", {
           editing: ui.identityEditing,
           deleteAction: "vm-identity-delete",
-          deleteTitle: "Delete virtual model",
+          deleteTitle: "Delete assistant",
           saveAction: "vm-identity-save",
           saveTitle: "Keep identity",
           refreshAction: "vm-identity-refresh",
@@ -439,7 +439,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         "</div>";
     }
     return (
-      '<details class="sum-vm-section" data-vm-section="identity" data-ui-part="virtual-model.identity"' +
+      '<details class="sum-vm-section" data-vm-section="identity" data-ui-part="assistant.identity"' +
       vmSectionOpenAttr(ui, "identity") +
       ">" +
       vmSectionHeaderHtml("Identity") +
@@ -539,7 +539,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         "</div></div>";
     }
     return (
-      '<details class="sum-vm-section" data-vm-section="fallback" data-ui-part="virtual-model.fallback"' +
+      '<details class="sum-vm-section" data-vm-section="fallback" data-ui-part="assistant.fallback"' +
       vmSectionOpenAttr(ui, "fallback") +
       ">" +
       vmSectionHeaderHtml("Fallback chain", {
@@ -644,7 +644,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         "</div></div>";
     }
     return (
-      '<details class="sum-vm-section" data-vm-section="routing" data-ui-part="virtual-model.routing"' +
+      '<details class="sum-vm-section" data-vm-section="routing" data-ui-part="assistant.routing"' +
       vmSectionOpenAttr(ui, "routing") +
       ">" +
       vmSectionHeaderHtml("Routing policy", {
@@ -756,7 +756,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
         "</div>";
     }
     return (
-      '<details class="sum-vm-section" data-vm-section="router" data-ui-part="virtual-model.tool-router"' +
+      '<details class="sum-vm-section" data-vm-section="router" data-ui-part="assistant.tool-router"' +
       vmSectionOpenAttr(ui, "router") +
       ">" +
       vmSectionHeaderHtml("Tool router", {
@@ -776,7 +776,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     );
   }
 
-  function buildVirtualModelCardHtml(vmSummary) {
+  function buildAssistantCardHtml(vmSummary) {
     vmSummary = vmSummary || {};
     var rowId = String(vmSummary.id != null ? vmSummary.id : "");
     var detail = vmDetail(ctx, rowId);
@@ -798,17 +798,17 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
       adminScopedEvlogPanelFromEvents(
         "Scoped log — " + modelId,
         "vm-" + rowId + "-routing",
-        adminScopedEventsForVirtualModel(modelId),
-        { uiPart: "virtual-model.scoped-evlog" }
+        adminScopedEventsForAssistant(modelId),
+        { uiPart: "assistant.scoped-evlog" }
       );
 
     return (
-      '<details class="sum-card sum-card--virtual-model" id="virtual-model-' +
+      '<details class="sum-card sum-card--assistant" id="assistant-' +
       escapeHtml(rowId) +
-      '" data-virtual-model-id="' +
+      '" data-assistant-id="' +
       escapeHtml(rowId) +
       '">' +
-      '<summary data-ui-part="virtual-model.summary">' +
+      '<summary data-ui-part="assistant.summary">' +
       '<span class="sum-avatar sum-av-svc-chimera-gateway">Vm</span>' +
       '<span class="sum-main"><span class="sum-title">' +
       escapeHtml(title) +
@@ -821,18 +821,18 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
       "</span>" +
       operatorCardChevronHtml() +
       "</summary>" +
-      '<div class="sum-body sum-body--virtual-model">' +
+      '<div class="sum-body sum-body--assistant">' +
       sections +
       "</div></details>"
     );
   }
 
-  function buildVirtualModelsSectionIntroHtml(count) {
+  function buildAssistantsSectionIntroHtml(count) {
     return (
       '<div class="sum-workspaces-intro">' +
-      '<p class="sum-workspaces-intro-lead">Operator-managed virtual models (<strong>' +
+      '<p class="sum-workspaces-intro-lead">Operator-managed assistants (<strong>' +
       escapeHtml(String(count)) +
-      "</strong>).Define virtual models with different routing policies and strategies.</p>" +
+      "</strong>). Define assistants with different routing policies and strategies.</p>" +
       "</div>"
     );
   }
@@ -848,7 +848,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     return "—";
   }
 
-  function syncVirtualModelDraftCardChrome(cardEl, draft) {
+  function syncAssistantDraftCardChrome(cardEl, draft) {
     if (!cardEl || !draft) return;
     var preview = draftModelIdPreview(draft);
     var codeEl = cardEl.querySelector(".sum-main--workspace-draft .sum-mono-id");
@@ -877,7 +877,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     }
   }
 
-  function buildVirtualModelDraftCardHtml(draft) {
+  function buildAssistantDraftCardHtml(draft) {
     draft = draft || {};
     var draftId = String(draft.id != null ? draft.id : "");
     var name = String(draft.name != null ? draft.name : "");
@@ -887,14 +887,14 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     var preview = draftModelIdPreview(draft);
     var msg = draft.msg ? String(draft.msg) : "";
     return (
-      '<article class="sum-card sum-card--virtual-model-draft sum-card--workspace-draft" id="virtual-model-draft-' +
+      '<article class="sum-card sum-card--assistant-draft sum-card--workspace-draft" id="assistant-draft-' +
       escapeHtml(draftId) +
-      '" data-virtual-model-draft="' +
+      '" data-assistant-draft="' +
       escapeHtml(draftId) +
       '">' +
       '<header class="sum-card__workspace-draft-hdr">' +
       '<span class="sum-avatar sum-av-svc-chimera-gateway">Vm</span>' +
-      '<span class="sum-main sum-main--workspace-draft"><span class="sum-title">New virtual model</span>' +
+      '<span class="sum-main sum-main--workspace-draft"><span class="sum-title">New assistant</span>' +
       '<span class="sum-sub sum-sub--clamp muted">Client model id: <code class="sum-mono-id">' +
       escapeHtml(preview) +
       "</code></span></span>" +
@@ -907,7 +907,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
       '"' +
       (draft.saving ? " disabled" : "") +
       ">Save</button></span></header>" +
-      '<div class="sum-body sum-body--virtual-model" data-ui-part="virtual-model-draft.form">' +
+      '<div class="sum-body sum-body--assistant" data-ui-part="assistant-draft.form">' +
       '<div class="sg-op-card-note sg-op-card-note--tight">Save to create the model, then configure fallback (required), routing, and tool-router on the new card.</div>' +
       '<div class="ws-draft-fields">' +
       '<div class="ws-draft-field"><label class="ws-draft-field-label">Name</label>' +
@@ -940,28 +940,28 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     );
   }
 
-  function buildVirtualModelsSectionBreakHtml(count) {
-    var intro = buildVirtualModelsSectionIntroHtml(count);
+  function buildAssistantsSectionBreakHtml(count) {
+    var intro = buildAssistantsSectionIntroHtml(count);
     if (typeof ctx.operatorSectionHeadHtml !== "function") {
       return (
-        '<div class="sum-section-label sum-feed-section-title">Virtual models</div>' +
+        '<div class="sum-section-label sum-feed-section-title">Assistants</div>' +
         intro
       );
     }
     var addBtn = "";
     if (typeof ctx.operatorSectionAddBtn === "function") {
-      var hasDraft = ctx.virtualModelDrafts && ctx.virtualModelDrafts.length > 0;
+      var hasDraft = ctx.assistantDrafts && ctx.assistantDrafts.length > 0;
       addBtn = ctx.operatorSectionAddBtn(
         { "data-admin-action": "vm-add" },
-        "Add virtual model",
+        "Add assistant",
         hasDraft
           ? { disabled: true, title: "Finish or cancel the draft model first" }
-          : { title: "Create a new virtual model" }
+          : { title: "Create a new assistant" }
       );
     }
     return (
-      '<div class="sg-op-virtual-models-section" id="sg-op-virtual-models-section">' +
-      ctx.operatorSectionHeadHtml("Virtual models", "network_intel_node", {
+      '<div class="sg-op-assistants-section" id="sg-op-assistants-section">' +
+      ctx.operatorSectionHeadHtml("Assistants", "network_intel_node", {
         actionHtml: addBtn
       }) +
       intro +
@@ -969,16 +969,16 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminVirtualModels = function (ctx)
     );
   }
 
-  ctx.buildVirtualModelCardHtml = buildVirtualModelCardHtml;
-  ctx.buildVirtualModelDraftCardHtml = buildVirtualModelDraftCardHtml;
-  ctx.buildVirtualModelsSectionIntroHtml = buildVirtualModelsSectionIntroHtml;
-  ctx.buildVirtualModelsSectionBreakHtml = buildVirtualModelsSectionBreakHtml;
-  ctx.adminScopedEventsForVirtualModel = adminScopedEventsForVirtualModel;
+  ctx.buildAssistantCardHtml = buildAssistantCardHtml;
+  ctx.buildAssistantDraftCardHtml = buildAssistantDraftCardHtml;
+  ctx.buildAssistantsSectionIntroHtml = buildAssistantsSectionIntroHtml;
+  ctx.buildAssistantsSectionBreakHtml = buildAssistantsSectionBreakHtml;
+  ctx.adminScopedEventsForAssistant = adminScopedEventsForAssistant;
   ctx.vmCardTitleText = vmCardTitleText;
   ctx.vmCardSubtitleText = vmCardSubtitleText;
-  ctx.syncVirtualModelCardHeader = syncVirtualModelCardHeader;
-  ctx.syncVirtualModelDraftCardChrome = syncVirtualModelDraftCardChrome;
-  ctx.mergeVirtualModelForRender = function (summary, id) {
+  ctx.syncAssistantCardHeader = syncAssistantCardHeader;
+  ctx.syncAssistantDraftCardChrome = syncAssistantDraftCardChrome;
+  ctx.mergeAssistantForRender = function (summary, id) {
     return mergeVm(summary, vmDetail(ctx, id));
   };
 };

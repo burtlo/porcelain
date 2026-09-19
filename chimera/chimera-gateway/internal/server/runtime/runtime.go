@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/assistant"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/corpusstale"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/gatewaymetrics"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/operatorstore"
@@ -17,7 +18,6 @@ import (
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/rag/ragembed"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/catalog"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/vectorstore/qdrant"
-	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/virtualmodel"
 	indexeradapter "github.com/lynn/porcelain/chimera/chimera-indexer/adapter"
 	"github.com/lynn/porcelain/chimera/internal/config"
 	"github.com/lynn/porcelain/chimera/internal/providerlimits"
@@ -37,7 +37,7 @@ type Runtime struct {
 	tokens                *tokens.Store
 	metrics               *gatewaymetrics.Store // optional; nil when disabled or init failed
 	operator              *operatorstore.Store  // optional; nil when init failed
-	virtualModels         *virtualmodel.Registry
+	assistants            *assistant.Registry
 	providerModels        *providermodels.Registry
 	brokerBaseURLOverride string // non-empty: after each yaml load, patch broker base + health (supervised chimera-broker)
 
@@ -131,12 +131,12 @@ func NewRuntimeWithBrokerOverride(gatewayPath string, log *slog.Logger, brokerBa
 		}
 		if err := operatorstore.BootstrapVirtualModels(context.Background(), s, res, log); err != nil {
 			if log != nil {
-				log.Warn("virtual model bootstrap failed", "msg", "gateway.virtual_model.bootstrap_failed", "err", err)
+				log.Warn("assistant bootstrap failed", "msg", naming.MsgGatewayAssistantBootstrapFailed, "err", err)
 			}
 		} else {
-			rt.virtualModels = virtualmodel.NewRegistry()
-			if err := rt.virtualModels.Reload(context.Background(), s); err != nil && log != nil {
-				log.Warn("virtual model registry reload failed", "msg", "gateway.virtual_model.reload_failed", "err", err)
+			rt.assistants = assistant.NewRegistry()
+			if err := rt.assistants.Reload(context.Background(), s); err != nil && log != nil {
+				log.Warn("assistant registry reload failed", "msg", naming.MsgGatewayAssistantReloadFailed, "err", err)
 			}
 		}
 		rt.providerModels = providermodels.NewRegistry()
@@ -335,37 +335,37 @@ func (rt *Runtime) SetOperatorStoreForTest(store *operatorstore.Store) {
 	rt.operator = store
 }
 
-// VirtualModels returns the in-memory virtual model registry, or nil when operator store is unavailable.
-// PrimaryVirtualModelID returns the first enabled virtual model id from operator SQLite, or "".
-func (rt *Runtime) PrimaryVirtualModelID() string {
+// Assistants returns the in-memory assistant registry, or nil when operator store is unavailable.
+// PrimaryAssistantID returns the first enabled assistant model id from operator SQLite, or "".
+func (rt *Runtime) PrimaryAssistantID() string {
 	if rt == nil {
 		return ""
 	}
-	if reg := rt.VirtualModels(); reg != nil {
+	if reg := rt.Assistants(); reg != nil {
 		return reg.BootstrapModelID()
 	}
 	return ""
 }
 
-func (rt *Runtime) VirtualModels() *virtualmodel.Registry {
+func (rt *Runtime) Assistants() *assistant.Registry {
 	rt.mu.RLock()
 	defer rt.mu.RUnlock()
-	return rt.virtualModels
+	return rt.assistants
 }
 
-// ReloadVirtualModels refreshes the registry from operator SQLite and bumps revision.
-func (rt *Runtime) ReloadVirtualModels(ctx context.Context) error {
+// ReloadAssistants refreshes the registry from operator SQLite and bumps revision.
+func (rt *Runtime) ReloadAssistants(ctx context.Context) error {
 	rt.mu.RLock()
 	store := rt.operator
-	reg := rt.virtualModels
+	reg := rt.assistants
 	rt.mu.RUnlock()
 	if store == nil {
 		return nil
 	}
 	if reg == nil {
-		reg = virtualmodel.NewRegistry()
+		reg = assistant.NewRegistry()
 		rt.mu.Lock()
-		rt.virtualModels = reg
+		rt.assistants = reg
 		rt.mu.Unlock()
 	}
 	return reg.Reload(ctx, store)

@@ -1,4 +1,4 @@
-package virtualmodel
+package assistant
 
 import (
 	"context"

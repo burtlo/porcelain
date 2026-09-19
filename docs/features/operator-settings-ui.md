@@ -7,22 +7,22 @@
 | **Status** | `current` |
 | **Introduced** | Gateway v0.2 unified operator shell; v0.3 settings route rename |
 | **Originated from** | [`plans/unified-logs-operator-shell.md`](../plans/unified-logs-operator-shell.md), [`plans/embedui-operator-settings-routes.md`](../plans/embedui-operator-settings-routes.md), [`plans/log-presentation-layer.md`](../plans/log-presentation-layer.md), [`plans/log-conversations.md`](../plans/log-conversations.md) |
-| **Related features** | [Operator virtual models](operator-virtual-models.md), [Operator provider model availability](operator-provider-model-availability.md), [Indexer workspaces](indexer-workspaces.md), [Indexer health and operator logs](indexer-health-and-operator-logs.md), [Operator log message registry](operator-log-message-registry.md), [Operator left navigation ribbon](operator-left-navigation-ribbon.md), [Operator embed UI mobile layout](operator-embed-ui-mobile-layout.md) |
+| **Related features** | [Operator assistants](operator-assistants.md), [Operator provider model availability](operator-provider-model-availability.md), [Indexer workspaces](indexer-workspaces.md), [Indexer health and operator logs](indexer-health-and-operator-logs.md), [Operator log message registry](operator-log-message-registry.md), [Operator left navigation ribbon](operator-left-navigation-ribbon.md), [Operator embed UI mobile layout](operator-embed-ui-mobile-layout.md) |
 | **Depends on** | UI session auth, servicelogs ring buffer, `/api/ui/state`, `/api/ui/logs` |
 | **Last updated** | See git history |
 
 ## At a glance
 
-Configuration and observability live on **`/ui/settings`**: collapsible **summarized cards** (gateway overview, tokens/users, providers, virtual models, routing, indexer workspaces) above a live **event log** with Summary/Detailed toggle. The app shell at `/ui` opens settings in the iframe with `?embed=1`; legacy routes (`/ui/logs`, `/ui/desktop`, `/ui/panel`, deep-link `?focus=` params) are removed. Logs poll and SSE from the in-process ring buffer; the UI shapes raw JSON into operator headlines, conversation timelines, and per-service cards without changing wire format.
+Configuration and observability live on **`/ui/settings`**: collapsible **summarized cards** (gateway overview, tokens/users, providers, assistants, routing, indexer workspaces) above a live **event log** with Summary/Detailed toggle. The app shell at `/ui` opens settings in the iframe with `?embed=1`; legacy routes (`/ui/logs`, `/ui/desktop`, `/ui/panel`, deep-link `?focus=` params) are removed. Logs poll and SSE from the in-process ring buffer; the UI shapes raw JSON into operator headlines, conversation timelines, and per-service cards without changing wire format.
 
 ## Operator-visible behavior
 
 - **Routes** — `/ui` (shell + ribbon), `/ui/chat`, `/ui/settings`, `/ui/settings/gallery`; login at `/ui/login`.
 - **Settings embed mode** — `?embed=1` hides standalone chrome; shell posts `chimera-settings-activate` on load.
-- **Summarized view (default)** — Cards for gateway version/health, usage metrics, API tokens, dynamic provider cards (Groq, Gemini, Ollama, …), virtual model cards, legacy global routing cards (where still wired), and indexer workspace cards fed from SQLite + structured indexer logs.
+- **Summarized view (default)** — Cards for gateway version/health, usage metrics, API tokens, dynamic provider cards (Groq, Gemini, Ollama, …), assistant cards, legacy global routing cards (where still wired), and indexer workspace cards fed from SQLite + structured indexer logs.
 - **Event log** — Filter by app source and level; **Summary** shows registry-driven one-liners; **Detailed** shows parsed field grid. Conversation-scoped rows group routing, RAG, upstream relay, tools, and merge/dedup lifecycle (`conversation.*` slugs).
 - **Provider cards** — Keys, model counts, availability summary, scoped log streams; **Configure** enters edit mode for per-model availability (see provider availability feature).
-- **Virtual model cards** — CRUD, enable/disable, fallback/routing/tool-router editors, generate-from-catalog, scoped routing logs.
+- **Assistant cards** — CRUD, enable/disable, fallback/routing/tool-router editors, generate-from-catalog, scoped routing logs.
 - **Indexer section** — Workspace CRUD, supervised YAML tuning, summarized progress cards (see indexer feature docs).
 - **Component gallery** — `/ui/settings/gallery` for design-01 primitives (development aid).
 - **Mobile layout** — Phone-width card headers and scoped event logs follow [Operator embed UI mobile layout](operator-embed-ui-mobile-layout.md) (stacked summary grid, two-column scoped log with inline meta).
@@ -34,7 +34,7 @@ Configuration and observability live on **`/ui/settings`**: collapsible **summar
 - HTML pages under `/ui/*`; JSON/SSE under `/api/ui/*` (unchanged API prefix).
 - Log buffer entries remain `source + text + ts + seq`; presentation is client-side only.
 - No prompt/response bodies in operator logs; redaction rules unchanged.
-- Correlation dimensions: `request_id`, `conversation_id`, `principal_id`, `index_run_id`, `virtual_model_id`, service source tags.
+- Correlation dimensions: `request_id`, `conversation_id`, `principal_id`, `index_run_id`, `assistant_id`, service source tags.
 - Summarized card rebuild preserves open/scroll state where possible; patch updates skip cards in active edit mode.
 
 **Decisions**
@@ -51,7 +51,7 @@ Configuration and observability live on **`/ui/settings`**: collapsible **summar
 
 **Persistence**
 
-- Operator SQLite for tokens, virtual models, workspaces, provider availability (gateway-owned).
+- Operator SQLite for tokens, assistants, workspaces, provider availability (gateway-owned).
 - Log ring buffer in-process (`servicelogs`); optional server-side event store for cross-restart history when configured.
 - Metrics in separate `metrics.sqlite` surfaced via `/api/ui/metrics`.
 
@@ -61,12 +61,12 @@ Configuration and observability live on **`/ui/settings`**: collapsible **summar
 |---------|--------|
 | `GET /ui/settings` | Settings page |
 | `GET /ui/settings/gallery` | Component gallery |
-| `GET /api/ui/state` | Gateway overview, providers, virtual models list for cards |
+| `GET /api/ui/state` | Gateway overview, providers, `assistants[]` list for cards |
 | `GET /api/ui/logs` | Poll log entries (`since_seq`, filters) |
 | `GET /api/ui/logs/stream` | SSE (`replay=tail`, default tail 200) |
 | `GET /api/ui/metrics` | Usage counts for card tables |
 | `GET /api/ui/tokens` | Token/user cards |
-| Virtual models, providers, indexer, routing | See related feature docs |
+| Assistants, providers, indexer, routing | See related feature docs |
 | Embed IPC | `{ type: "chimera-settings-activate" }` from shell |
 
 ## Code map
@@ -97,7 +97,7 @@ Manual: login → `/ui` → open **Settings** from ribbon; confirm cards hydrate
 
 - Full CSS sectioning of `settings.css` (logs-ui-maintainability Workstream C partial).
 - Remote log shipping (Splunk, etc.) — ring buffer only.
-- Legacy global routing YAML cards coexist with per-VM cards during migration; prefer virtual model cards for new config.
+- Legacy global routing YAML cards coexist with per-assistant cards during migration; prefer assistant cards for new config.
 
 ## References
 

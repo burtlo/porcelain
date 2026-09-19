@@ -563,43 +563,43 @@ globalThis.ChimeraSettings.Summarized.mountCardPatch = function (bridge, panel) 
 
   function lookupVmSummary(vmId) {
     var gw = ctx.adminStateCache && ctx.adminStateCache.gateway;
-    var vms = gw && gw.virtual_models && Array.isArray(gw.virtual_models) ? gw.virtual_models : [];
+    var vms = gw && gw.assistants && Array.isArray(gw.assistants) ? gw.assistants : [];
     for (var i = 0; i < vms.length; i++) {
       if (vms[i] && Number(vms[i].id) === Number(vmId)) return vms[i];
     }
     return null;
   }
 
-  function virtualModelCardEl(vmId) {
-    return document.getElementById("virtual-model-" + String(vmId));
+  function assistantCardEl(vmId) {
+    return document.getElementById("assistant-" + String(vmId));
   }
 
-  function virtualModelPanelIsOpen(vmId) {
-    var el = virtualModelCardEl(vmId);
+  function assistantPanelIsOpen(vmId) {
+    var el = assistantCardEl(vmId);
     return !!(el && el.open);
   }
 
-  function patchVirtualModelCard(vmId, opts) {
+  function patchAssistantCard(vmId, opts) {
     opts = opts || {};
-    if (opts.onlyIfOpen && !virtualModelPanelIsOpen(vmId)) return false;
+    if (opts.onlyIfOpen && !assistantPanelIsOpen(vmId)) return false;
     var summary = lookupVmSummary(vmId);
-    if (!summary || typeof bridge.buildVirtualModelCardHtml !== "function") return false;
-    var cardId = "virtual-model-" + String(vmId);
+    if (!summary || typeof bridge.buildAssistantCardHtml !== "function") return false;
+    var cardId = "assistant-" + String(vmId);
     var oldEl = document.getElementById(cardId);
     var uiKey = String(vmId);
-    if (oldEl && ctx.virtualModelUi && ctx.virtualModelUi[uiKey]) {
-      syncVmSectionOpenFromDom(oldEl, ctx.virtualModelUi[uiKey]);
+    if (oldEl && ctx.assistantUi && ctx.assistantUi[uiKey]) {
+      syncVmSectionOpenFromDom(oldEl, ctx.assistantUi[uiKey]);
     }
     var keepOpen = oldEl ? !!oldEl.open : false;
     var ok = replaceCardById(
       cardId,
       function () {
-        return bridge.buildVirtualModelCardHtml(summary);
+        return bridge.buildAssistantCardHtml(summary);
       },
       { preserveOpen: keepOpen, preserveScrollSelectors: ADMIN_CARD_TABLE_SCROLL_SEL }
     );
-    if (ok && ctx.virtualModelUi && ctx.virtualModelUi[String(vmId)]) {
-      ctx.virtualModelUi[String(vmId)].hydrated = true;
+    if (ok && ctx.assistantUi && ctx.assistantUi[String(vmId)]) {
+      ctx.assistantUi[String(vmId)].hydrated = true;
     }
     return ok;
   }
@@ -654,21 +654,21 @@ globalThis.ChimeraSettings.Summarized.mountCardPatch = function (bridge, panel) 
     }
   }
 
-  function removeVirtualModelFromSummarizedFeed(vmId) {
+  function removeAssistantFromSummarizedFeed(vmId) {
     var key = String(vmId);
-    if (ctx.virtualModelDetails) delete ctx.virtualModelDetails[key];
-    if (ctx.virtualModelUi) delete ctx.virtualModelUi[key];
+    if (ctx.assistantDetails) delete ctx.assistantDetails[key];
+    if (ctx.assistantUi) delete ctx.assistantUi[key];
     var gw = ctx.adminStateCache && ctx.adminStateCache.gateway;
-    if (gw && gw.virtual_models && Array.isArray(gw.virtual_models)) {
+    if (gw && gw.assistants && Array.isArray(gw.assistants)) {
       var kept = [];
-      for (var i = 0; i < gw.virtual_models.length; i++) {
-        if (gw.virtual_models[i] && Number(gw.virtual_models[i].id) !== Number(vmId)) {
-          kept.push(gw.virtual_models[i]);
+      for (var i = 0; i < gw.assistants.length; i++) {
+        if (gw.assistants[i] && Number(gw.assistants[i].id) !== Number(vmId)) {
+          kept.push(gw.assistants[i]);
         }
       }
-      gw.virtual_models = kept;
+      gw.assistants = kept;
     }
-    var cardEl = document.getElementById("virtual-model-" + key);
+    var cardEl = document.getElementById("assistant-" + key);
     if (cardEl && cardEl.parentNode) cardEl.parentNode.removeChild(cardEl);
     bridge.syncSummarizedModelCache();
   }
@@ -691,7 +691,7 @@ globalThis.ChimeraSettings.Summarized.mountCardPatch = function (bridge, panel) 
     patchAdminUsersCard: patchAdminUsersCard,
     patchAdminProviderCard: patchAdminProviderCard,
     patchAdminCardsFromPoll: patchAdminCardsFromPoll,
-    patchVirtualModelCard: patchVirtualModelCard,
-    removeVirtualModelFromSummarizedFeed: removeVirtualModelFromSummarizedFeed
+    patchAssistantCard: patchAssistantCard,
+    removeAssistantFromSummarizedFeed: removeAssistantFromSummarizedFeed
   };
 };

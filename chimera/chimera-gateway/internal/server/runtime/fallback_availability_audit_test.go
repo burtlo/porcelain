@@ -169,7 +169,7 @@ func seedTestVMFallbackChain(t *testing.T, rt *Runtime, chain []string) {
 	if _, err := st.InsertVirtualModelFull(ctx, vm); err != nil {
 		t.Fatal(err)
 	}
-	if err := rt.ReloadVirtualModels(ctx); err != nil {
+	if err := rt.ReloadAssistants(ctx); err != nil {
 		t.Fatal(err)
 	}
 }

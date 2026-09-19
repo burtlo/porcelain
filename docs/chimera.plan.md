@@ -17,7 +17,7 @@ This document holds **vision and normative product requirements**. It does **not
 
 ## System vision
 
-The runnable stack is a set of **Chimera wrapper processes** supervised by **`chimera-supervisor`**: gateway (client API), broker (LLM upstream), optional vector store, optional workspace indexer. The gateway owns **orchestration** — virtual models, routing policy, fallback, RAG retrieval, structured logs — while the broker owns **provider keys and upstream relay**.
+The runnable stack is a set of **Chimera wrapper processes** supervised by **`chimera-supervisor`**: gateway (client API), broker (LLM upstream), optional vector store, optional workspace indexer. The gateway owns **orchestration** — assistants, routing policy, fallback, RAG retrieval, structured logs — while the broker owns **provider keys and upstream relay**.
 
 See [supervisor.md](supervisor.md), [network.md](network.md), and platform contracts in [features/](features/README.md) for the current layout.
 
@@ -32,7 +32,7 @@ Future scope only; shipped behavior lives in version docs and feature records.
 | **v0.1** | Portable Go gateway, BiFrost upstream, streaming, tokens, health, structured logs | [version-v0.1.md](version-v0.1.md) |
 | **v0.1.1** | Tool router, metrics, provider quotas | [version-v0.1.1.md](version-v0.1.1.md) |
 | **v0.2** | RAG ingest/retrieval, indexer REST, Qdrant, workspace indexer | [version-v0.2.md](version-v0.2.md) |
-| **v0.3** | Branding, onboarding, operator virtual models, SQLite operator store, desktop shell | [version-v0.3.md](version-v0.3.md) |
+| **v0.3** | Branding, onboarding, operator assistants, SQLite operator store, desktop shell | [version-v0.3.md](version-v0.3.md) |
 | **v0.4** | Ensemble (“heavy thinking”), triggers, escalation, paste-back | [version-v0.4.md](version-v0.4.md) |
 | **v0.5** | Gateway MCP (optional); conversation archive ingestion | — |
 | **v0.7** | TLS, trust stores, `/health` hardening, rate limits, audit/redaction | — |
@@ -56,14 +56,14 @@ Engineering task breakdown: [plans/README.md](plans/README.md).
 ### Compatibility and interoperability
 
 1. **SSE / streaming** — Chat streaming MUST match **OpenAI-compatible** behavior expected by Continue on day one.
-2. **`GET /v1/models` catalog** — Gateway **merges** upstream models with **operator-defined virtual models**; explicit upstream ids **proxy** unchanged when clients address concrete providers directly.
+2. **`GET /v1/models` catalog** — Gateway **merges** upstream models with **operator-defined assistants**; explicit upstream ids **proxy** unchanged when clients address concrete providers directly.
 3. **Continue samples** — Directory `vscode-continue/`: `apiBase`, `apiKey`, model selection, RAG headers (`X-Chimera-Project`, `X-Chimera-Flavor-Id`, conversation id when used).
 
 ---
 
 ### Gateway turn orchestration
 
-1. **Virtual models** — Operators define one or more **virtual model ids** with per-model routing stacks (fallback, policy rules, tool router, RAG). Clients send a virtual model id for orchestrated turns; the gateway applies that stack. As-built: [operator-virtual-models](features/operator-virtual-models.md), [gateway-chat-routing-pipeline](features/gateway-chat-routing-pipeline.md).
+1. **Assistants** — Operators define one or more **assistant `model_id`s** with per-assistant routing stacks (fallback, policy rules, tool router, RAG). Clients send an assistant `model_id` for orchestrated turns; the gateway applies that stack. As-built: [operator-assistants](features/operator-assistants.md), [gateway-chat-routing-pipeline](features/gateway-chat-routing-pipeline.md).
 2. **Sequential fallback chain** — On upstream failure, **429**, or admission block, walk the configured **ordered** upstream model list (**fail-fast** until queue milestone — *Resilience · 2*).
 
 ---
@@ -98,14 +98,14 @@ Engineering task breakdown: [plans/README.md](plans/README.md).
 1. **Product naming** — Layered names (Porcelain suite, Chimera binaries, Locus desktop) per [product-naming-contract](features/product-naming-contract.md).
 2. **Single stable URL** — One base URL for clients; no manual per-request model switching in the UI.
 3. **OpenAI-compatible chat surface** — Chat/completions shapes expected by common IDEs and agents.
-4. **Orchestrated vs explicit model choice** — Virtual model id for orchestrated turns; explicit upstream id for direct proxy.
+4. **Orchestrated vs explicit model choice** — Assistant `model_id` for orchestrated turns; explicit upstream id for direct proxy.
 
 ---
 
 ### Responsibility split (upstream vs gateway)
 
 1. **Broker / upstream** — Provider keys, retries, streaming, OpenAI-shaped requests to backends; **parallel completions** when the gateway orchestrates ensembles.
-2. **Gateway** — Apply routing policy and fallback for virtual models; RAG retrieve/inject when enabled; ensemble phase orchestration and escalation when implemented.
+2. **Gateway** — Apply routing policy and fallback for assistants; RAG retrieve/inject when enabled; ensemble phase orchestration and escalation when implemented.
 3. **Delivery layering** — Ship a working gateway + upstream path before expanding orchestration depth; do not rebuild a full custom LLM proxy unless forced.
 
 ---
@@ -201,7 +201,7 @@ As-built: [gateway-rag-ingest-and-retrieval](features/gateway-rag-ingest-and-ret
 
 ### Routing mechanics
 
-1. **Rules and heuristics first** — For virtual models, combine heuristics with fallback chain — not an LLM every turn. Explicit ids → direct proxy.
+1. **Rules and heuristics first** — For assistants, combine heuristics with fallback chain — not an LLM every turn. Explicit ids → direct proxy.
 2. **Optional routing judge** — Later: small fast model may assist on ambiguous turns.
 
 ---
@@ -224,7 +224,7 @@ As-built: [gateway-rag-ingest-and-retrieval](features/gateway-rag-ingest-and-ret
 ### Ensemble orchestration (future — v0.4)
 
 1. **Two-phase ensemble** — N parallel drafts, then critique/synthesize → one answer; default N = 3; cap by available backends.
-2. **Ensemble triggers** — Automatic + manual `//deep` (trimmed); virtual-model-only; gateway may strip `//deep` upstream.
+2. **Ensemble triggers** — Automatic + manual `//deep` (trimmed); assistant-only; gateway may strip `//deep` upstream.
 3. **Ensemble integration** — Orchestration in gateway; upstream executes parallel calls.
 
 Detail: [version-v0.4.md](version-v0.4.md).
