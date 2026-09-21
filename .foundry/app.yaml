@@ -1,0 +1,60 @@
+schema_version: 1
+id: porcelain
+tags:
+  - go
+  - chimera
+commands:
+  build:
+    default:
+      argv:
+        - make
+        - build
+      cwd: .
+      timeout_seconds: 1800
+  test:
+    default:
+      argv:
+        - make
+        - test
+      cwd: .
+      timeout_seconds: 1800
+  precommit:
+    default:
+      argv:
+        - make
+        - precommit
+      cwd: .
+      timeout_seconds: 3600
+verification:
+  implementation:
+    - build
+    - test
+  post_repair:
+    - build
+    - test
+    - precommit
+builders:
+  default_owner: feature-builder
+  routes:
+    - id: operator-ui
+      owner: client-builder
+      priority: 200
+      globs:
+        - chimera/chimera-gateway/internal/server/adminui/embed/**
+    - id: backend
+      owner: backend-builder
+      priority: 100
+      globs:
+        - chimera/**
+        - locus/**
+        - internal/**
+        - migrations/**
+documentation:
+  model: feature-records
+  config:
+    include:
+      - docs/features/**
+    exclude:
+      - docs/plans/**
+      - docs/version-v0.*
+      - .cursor/skills/**
