@@ -15,6 +15,7 @@ func TestResolveMCPFromStore_SQLiteOverridesYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = s.Close() })
 	vm, err := s.CreateAssistant(ctx, CreateAssistantInput{
 		ModelID: "Dev-1.0", Name: "Dev", Version: "1.0", TenantID: "", Enabled: true,
 	})
