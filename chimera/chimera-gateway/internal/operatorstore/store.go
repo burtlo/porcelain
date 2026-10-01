@@ -128,6 +128,25 @@ func (s *Store) ListWorkspaces(ctx context.Context, tenantID string) ([]Workspac
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
 	}
+	seen := make(map[int64]struct{})
+	var out []Workspace
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		batch, err := s.listWorkspacesForTenant(ctx, tenant)
+		if err != nil {
+			return nil, err
+		}
+		for _, w := range batch {
+			if _, dup := seen[w.ID]; dup {
+				continue
+			}
+			seen[w.ID] = struct{}{}
+			out = append(out, w)
+		}
+	}
+	return out, nil
+}
+
+func (s *Store) listWorkspacesForTenant(ctx context.Context, tenantID string) ([]Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id, tenant_id, project_id, flavor_id, sensitivity, allow_cloud, allow_cloud_summary_only, file_action_policy, reindex_generation, created_at, updated_at
 FROM workspaces
@@ -249,6 +268,16 @@ func (s *Store) GetWorkspace(ctx context.Context, tenantID string, id int64) (*W
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
 	}
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		ws, err := s.getWorkspaceRow(ctx, tenant, id)
+		if err != nil || ws != nil {
+			return ws, err
+		}
+	}
+	return nil, nil
+}
+
+func (s *Store) getWorkspaceRow(ctx context.Context, tenantID string, id int64) (*Workspace, error) {
 	var w Workspace
 	var ca, ua string
 	err := s.db.QueryRowContext(ctx, `
@@ -319,30 +348,38 @@ func (s *Store) ResolveWorkspaceScope(ctx context.Context, tenantID, projectID, 
 	if s == nil || s.db == nil {
 		return nil, nil, fmt.Errorf("operator store unavailable")
 	}
+	var ids []int64
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		ids, err := s.listWorkspaceIDsForScope(ctx, tenant, projectID, flavorID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(ids) > 0 {
+			workspace, err := s.GetWorkspace(ctx, tenantID, ids[0])
+			return workspace, ids, err
+		}
+	}
+	return nil, ids, nil
+}
+
+func (s *Store) listWorkspaceIDsForScope(ctx context.Context, tenantID, projectID, flavorID string) ([]int64, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id FROM workspaces
 WHERE tenant_id = ? AND project_id = ? AND flavor_id = ?
 ORDER BY id`, tenantID, projectID, flavorID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 	var ids []int64
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		ids = append(ids, id)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
-	}
-	if len(ids) == 0 {
-		return nil, ids, nil
-	}
-	workspace, err := s.GetWorkspace(ctx, tenantID, ids[0])
-	return workspace, ids, err
+	return ids, rows.Err()
 }
 
 // DeleteWorkspace removes a workspace and its paths (CASCADE).
@@ -350,18 +387,20 @@ func (s *Store) DeleteWorkspace(ctx context.Context, tenantID string, id int64) 
 	if s == nil || s.db == nil {
 		return fmt.Errorf("operator store unavailable")
 	}
-	res, err := s.db.ExecContext(ctx, `DELETE FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenantID)
-	if err != nil {
-		return err
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		res, err := s.db.ExecContext(ctx, `DELETE FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenant)
+		if err != nil {
+			return err
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			return nil
+		}
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return fmt.Errorf("workspace not found")
-	}
-	return nil
+	return fmt.Errorf("workspace not found")
 }
 
 // AddPath appends a watched path to a workspace.

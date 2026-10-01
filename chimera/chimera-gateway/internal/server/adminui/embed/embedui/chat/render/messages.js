@@ -43,6 +43,15 @@
     );
   }
 
+  function renderDebugCopyButton(msgId) {
+    return (
+      '<button type="button" class="chat-msg__copy-btn chat-msg__debug-btn" data-debug-msg-id="' +
+      esc(msgId) +
+      '" title="Copy troubleshooting details" aria-label="Copy troubleshooting details">' +
+      '<span class="material-symbols-outlined" aria-hidden="true">bug_report</span></button>'
+    );
+  }
+
   function renderUserCopyFooter(copyText) {
     return (
       '<div class="chat-msg__bar-footer chat-msg__copy-footer">' +
@@ -187,7 +196,21 @@
 
   function renderTurnDetails(msg) {
     var summary = msg && msg.harnessSummary;
-    if (!summary || typeof summary !== "object") return "";
+    var requestId = msg && msg.requestId;
+    if ((!summary || typeof summary !== "object") && !requestId) return "";
+    if (!summary || typeof summary !== "object") {
+      return (
+        '<details class="chat-turn-details" data-ui-part="chat.turn-details">' +
+        '<summary><span class="chat-turn-details__lead">' +
+        CHEVRON_ICON +
+        '</span>Turn details</summary>' +
+        '<div class="chat-turn-details__body">' +
+        '<div class="chat-turn-details__facts">' +
+        detailChip("Request", requestId) +
+        (msg.turnIndex != null ? detailChip("Turn", msg.turnIndex) : "") +
+        "</div></div></details>"
+      );
+    }
     var intent = summary.intent || {};
     var retrieval = summary.retrieval || {};
     var execution = summary.execution || {};
@@ -201,6 +224,8 @@
     var tags = Array.isArray(intent.tags) ? intent.tags : [];
     for (var i = 0; i < tags.length; i++) intentChips.push(detailChip("Tag", tags[i]));
     var facts = [
+      detailChip("Request", requestId || summary.request_id),
+      msg.turnIndex != null ? detailChip("Turn", msg.turnIndex) : detailChip("Turn", summary.turn_index),
       detailChip("RAG", retrieval.ran ? String(retrieval.hits_count || 0) + " hits" : "not used"),
       detailChip("Model", execution.resolved_model_id || plan.primary_model_id),
       detailChip("Evaluator", evaluation.ran ? (evaluation.recommend_escalation ? "escalate" : "passed") : "not run"),
@@ -276,7 +301,11 @@
 
     var headActions = "";
     if (msg.role !== "user") {
-      headActions = '<div class="chat-msg__actions">' + renderCopyButton(copyText) + "</div>";
+      var actions = renderCopyButton(copyText);
+      if (msg.role === "assistant" && msg.status !== "streaming") {
+        actions += renderDebugCopyButton(msg.id);
+      }
+      headActions = '<div class="chat-msg__actions">' + actions + "</div>";
     }
 
     var userCopyFooter = msg.role === "user" ? renderUserCopyFooter(copyText) : "";

@@ -100,6 +100,8 @@ const (
 	HeaderRAGHitsTarget = "X-Chimera-RAG-Hits"
 	// HeaderHarnessSummaryTarget is base64-encoded redacted harness turn envelope JSON.
 	HeaderHarnessSummaryTarget = "X-Chimera-Harness-Summary"
+	// HeaderTurnIndexTarget is the monotonic turn counter for the conversation thread.
+	HeaderTurnIndexTarget = "X-Chimera-Turn-Index"
 	// HeaderWorkspaceRowIDTarget is the operator SQLite workspace row id active when chat started.
 	HeaderWorkspaceRowIDTarget = "X-Chimera-Workspace-Id"
 

@@ -19,9 +19,12 @@ type ToolExecutorStage struct{}
 func (ToolExecutorStage) Name() string   { return "tool_executor" }
 func (ToolExecutorStage) Module() string { return operatorstore.HarnessModuleToolExecutor }
 
-func (ToolExecutorStage) Run(_ context.Context, tc *TurnContext, env *TurnEnvelope, body Body) error {
+func (ToolExecutorStage) Run(ctx context.Context, tc *TurnContext, env *TurnEnvelope, body Body) error {
 	if tc == nil || tc.Stack.VM == nil || !tc.Stack.VM.HarnessEnabled(operatorstore.HarnessModuleToolExecutor) {
 		return nil
+	}
+	if tc.ToolExecutor == nil {
+		applyWorkspaceScope(ctx, tc, env)
 	}
 	decls := tc.ToolDeclarations
 	if len(decls) == 0 {
@@ -74,6 +77,8 @@ func runWorkspaceToolLoop(ctx context.Context, tc *TurnContext, env *TurnEnvelop
 	if tc == nil || opts == nil {
 		return
 	}
+	maxRounds := toolRounds(tc)
+	logToolLoopStarted(tc, env, maxRounds)
 	lastModel := tc.InitialModel
 	baseOpts := *opts
 	baseOpts.OnResponseCaptured = nil
@@ -83,20 +88,35 @@ func runWorkspaceToolLoop(ctx context.Context, tc *TurnContext, env *TurnEnvelop
 			opts.OnFallbackAttempt(model, attempt)
 		}
 	}
-	for round := 0; round < toolRounds(tc); round++ {
+	roundsUsed := 0
+	toolsExecuted := false
+	finishReason := "final_no_tools"
+	for round := 0; round < maxRounds; round++ {
+		roundsUsed = round + 1
 		buffer := httptest.NewRecorder()
 		chat.WithAssistantFallback(ctx, buffer, tc.InitialModel, tc.Stack.Fallback, tc.Resolved.UpstreamBaseURL,
 			tc.APIKey, false, body, tc.Timeout, tc.RouteLog, tc.Metrics, tc.LimitsGuard, &baseOpts)
 		raw := buffer.Body.Bytes()
-		calls, assistant := completionToolCalls(raw)
+		calls, assistant, parseSource := completionToolCallsWithSource(raw)
+		logToolModelRound(tc, env, round+1, parseSource, len(calls))
 		if len(calls) == 0 {
+			if toolsExecuted {
+				if patched, synth := maybeReplaceStubFinalCompletion(body, lastUserText(body), raw); synth != "" {
+					raw = patched
+					buffer.Body.Reset()
+					buffer.Body.Write(raw)
+					finishReason = "final_synthesized"
+				}
+			}
 			if opts.OnResponseCaptured != nil {
 				opts.OnResponseCaptured(buffer.Code, lastModel, false, raw)
 			}
 			writeBufferedResponse(tc.W, buffer, tc.Stream)
+			logToolLoopFinished(tc, env, roundsUsed, finishReason)
 			return
 		}
-		appendToolMessages(body, assistant, calls, tc.ToolExecutor, env, ctx)
+		toolsExecuted = true
+		appendToolMessages(ctx, tc, env, round+1, body, assistant, calls, tc.ToolExecutor)
 	}
 	// The model repeatedly requested tools. A final completion gives it the
 	// bounded-loop result without executing another call.
@@ -107,29 +127,35 @@ func runWorkspaceToolLoop(ctx context.Context, tc *TurnContext, env *TurnEnvelop
 		opts.OnResponseCaptured(buffer.Code, lastModel, false, buffer.Body.Bytes())
 	}
 	writeBufferedResponse(tc.W, buffer, tc.Stream)
+	logToolLoopFinished(tc, env, roundsUsed, "max_rounds")
 }
 
 func completionToolCalls(raw []byte) ([]tools.ToolCall, json.RawMessage) {
+	calls, assistant, _ := completionToolCallsWithSource(raw)
+	return calls, assistant
+}
+
+func completionToolCallsWithSource(raw []byte) ([]tools.ToolCall, json.RawMessage, string) {
 	var completion struct {
 		Choices []struct {
 			Message json.RawMessage `json:"message"`
 		} `json:"choices"`
 	}
 	if json.Unmarshal(raw, &completion) != nil || len(completion.Choices) == 0 || len(completion.Choices[0].Message) == 0 {
-		return nil, nil
+		return nil, nil, "none"
 	}
 	msgRaw := completion.Choices[0].Message
-	calls, assistant := parseMessageToolCalls(msgRaw)
+	calls, assistant, parseSource := parseMessageToolCalls(msgRaw)
 	if len(calls) == 0 {
-		return nil, nil
+		return nil, nil, "none"
 	}
 	if len(assistant) == 0 {
 		assistant = msgRaw
 	}
-	return calls, assistant
+	return calls, assistant, parseSource
 }
 
-func parseMessageToolCalls(msgRaw json.RawMessage) ([]tools.ToolCall, json.RawMessage) {
+func parseMessageToolCalls(msgRaw json.RawMessage) ([]tools.ToolCall, json.RawMessage, string) {
 	var message struct {
 		Role      string `json:"role"`
 		Content   string `json:"content"`
@@ -143,7 +169,7 @@ func parseMessageToolCalls(msgRaw json.RawMessage) ([]tools.ToolCall, json.RawMe
 		} `json:"tool_calls"`
 	}
 	if json.Unmarshal(msgRaw, &message) != nil {
-		return nil, nil
+		return nil, nil, "none"
 	}
 	out := make([]tools.ToolCall, 0, len(message.ToolCalls))
 	for _, call := range message.ToolCalls {
@@ -153,30 +179,50 @@ func parseMessageToolCalls(msgRaw json.RawMessage) ([]tools.ToolCall, json.RawMe
 		out = append(out, tools.ToolCall{ID: call.ID, Name: call.Function.Name, Arguments: json.RawMessage(call.Function.Arguments)})
 	}
 	if len(out) > 0 {
-		return out, msgRaw
+		return out, msgRaw, "tool_calls"
 	}
-	parsed := parseToolCallsFromContent(message.Content)
+	parsed, parseSource := parseToolCallsFromContent(message.Content)
 	if len(parsed) == 0 {
-		return nil, nil
+		return nil, nil, "none"
 	}
 	assistant, err := buildAssistantToolCallMessage(parsed)
 	if err != nil {
-		return parsed, msgRaw
+		return parsed, msgRaw, parseSource
 	}
-	return parsed, assistant
+	return parsed, assistant, parseSource
 }
 
-func parseToolCallsFromContent(content string) []tools.ToolCall {
+func parseToolCallsFromContent(content string) ([]tools.ToolCall, string) {
 	content = strings.TrimSpace(content)
 	if content == "" {
-		return nil
+		return nil, "none"
 	}
+	parseSource := "none"
+	var all []tools.ToolCall
 	for _, block := range toolCallContentCandidates(content) {
-		if calls := decodeToolCallObjects(block); len(calls) > 0 {
-			return calls
+		calls, src := toolCallsFromBlock(block)
+		if len(calls) == 0 {
+			continue
+		}
+		all = append(all, calls...)
+		if parseSource == "none" {
+			parseSource = src
 		}
 	}
-	return nil
+	if len(all) == 0 {
+		return nil, "none"
+	}
+	return all, parseSource
+}
+
+func toolCallsFromBlock(block string) ([]tools.ToolCall, string) {
+	if calls := decodeToolCallObjects(block); len(calls) > 0 {
+		return calls, "content_json"
+	}
+	if calls := inferToolCallsFromShorthand(block); len(calls) > 0 {
+		return calls, "content_shorthand"
+	}
+	return nil, "none"
 }
 
 func toolCallContentCandidates(content string) []string {
@@ -186,11 +232,45 @@ func toolCallContentCandidates(content string) []string {
 			out = append(out, block)
 		}
 	}
-	if stripped := stripMarkdownJSONFence(content); stripped != content {
-		out = append(out, stripped)
+	fences := extractMarkdownCodeBlocks(content)
+	for _, block := range fences {
+		out = append(out, block)
+	}
+	if len(fences) == 0 {
+		if stripped := stripMarkdownJSONFence(content); stripped != content {
+			out = append(out, stripped)
+		}
 	}
 	out = append(out, content)
 	return out
+}
+
+// extractMarkdownCodeBlocks returns inner text from ```json ... ``` (and generic ```) fences.
+func extractMarkdownCodeBlocks(content string) []string {
+	var blocks []string
+	rest := content
+	for {
+		idx := strings.Index(rest, "```")
+		if idx < 0 {
+			break
+		}
+		afterOpen := rest[idx+3:]
+		lineEnd := strings.Index(afterOpen, "\n")
+		if lineEnd < 0 {
+			break
+		}
+		bodyStart := afterOpen[lineEnd+1:]
+		close := strings.Index(bodyStart, "```")
+		if close < 0 {
+			break
+		}
+		block := strings.TrimSpace(bodyStart[:close])
+		if block != "" {
+			blocks = append(blocks, block)
+		}
+		rest = bodyStart[close+3:]
+	}
+	return blocks
 }
 
 func extractTaggedBlocks(content, tag string) []string {
@@ -286,18 +366,12 @@ func buildAssistantToolCallMessage(calls []tools.ToolCall) (json.RawMessage, err
 	})
 }
 
-func appendToolMessages(body Body, assistant json.RawMessage, calls []tools.ToolCall, executor tools.ToolExecutor, env *TurnEnvelope, ctx context.Context) {
+func appendToolMessages(ctx context.Context, tc *TurnContext, env *TurnEnvelope, round int, body Body, assistant json.RawMessage, calls []tools.ToolCall, executor tools.ToolExecutor) {
 	var messages []json.RawMessage
 	_ = json.Unmarshal(body["messages"], &messages)
 	messages = append(messages, assistant)
 	for _, call := range calls {
-		result, err := executor.Invoke(ctx, call)
-		if err != nil {
-			result.IsError = true
-			if strings.TrimSpace(result.Content) == "" {
-				result.Content = "tool failed"
-			}
-		}
+		result := invokeAndLogTool(ctx, tc, env, round, call, executor)
 		if env != nil {
 			env.Execution.ToolCalls = append(env.Execution.ToolCalls, ToolCallRecord{Name: call.Name, ID: call.ID})
 		}

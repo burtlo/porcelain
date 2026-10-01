@@ -9,9 +9,9 @@ import (
 )
 
 // LogConversationIncomingToolMessages emits conversation.tool.call_* for each OpenAI-style
-// tool-role message in the chat completion payload (client-executed tools whose results are
-// relayed through chimera-broker). The gateway does not execute tools locally; this is the observable relay
-// boundary before broker proxying.
+// tool-role message already present in the inbound chat request (client-executed tools whose
+// results are relayed to the model). Harness workspace/MCP tools executed on later harness
+// stages are logged under harness.tool.* instead.
 func LogConversationIncomingToolMessages(log *slog.Logger, messages json.RawMessage) {
 	if log == nil || len(messages) == 0 {
 		return

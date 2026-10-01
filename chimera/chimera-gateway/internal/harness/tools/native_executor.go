@@ -37,9 +37,6 @@ func (n *NativeExecutor) invokeExpansion(ctx context.Context, call ToolCall) (To
 	if err := ctx.Err(); err != nil {
 		return ToolResult{}, err
 	}
-	if n.Expansion == nil {
-		return ToolResult{Content: "rag expansion tools unavailable", IsError: true}, fmt.Errorf("expansion service nil")
-	}
 	switch call.Name {
 	case "workspace_context_around":
 		return n.contextAround(ctx, call.Arguments)
@@ -69,10 +66,18 @@ func (n *NativeExecutor) contextAround(ctx context.Context, raw json.RawMessage)
 	}
 	hash := strings.TrimSpace(args.ContentSHA256)
 	if hash == "" {
-		return ToolResult{Content: "content_sha256 is required", IsError: true}, fmt.Errorf("content_sha256 required")
+		start := args.Line - args.BeforeLines
+		if start < 1 {
+			start = 1
+		}
+		end := args.Line + args.AfterLines
+		return n.readLinesFromWorkspace(ctx, source, start, end)
 	}
 	if args.Line < 1 {
 		return ToolResult{Content: "line must be >= 1", IsError: true}, fmt.Errorf("invalid line")
+	}
+	if n.Expansion == nil {
+		return ToolResult{Content: "rag expansion tools unavailable", IsError: true}, fmt.Errorf("expansion service nil")
 	}
 	text, err := n.Expansion.ContextAround(ctx, n.Coords, source, hash, args.Line, args.BeforeLines, args.AfterLines)
 	if err != nil {
@@ -96,11 +101,14 @@ func (n *NativeExecutor) readLines(ctx context.Context, raw json.RawMessage) (To
 		return ToolResult{Content: "source must be relative to a workspace root", IsError: true}, err
 	}
 	hash := strings.TrimSpace(args.ContentSHA256)
-	if hash == "" {
-		return ToolResult{Content: "content_sha256 is required", IsError: true}, fmt.Errorf("content_sha256 required")
-	}
 	if args.StartLine < 1 || args.EndLine < args.StartLine {
 		return ToolResult{Content: "start_line and end_line required", IsError: true}, fmt.Errorf("invalid line range")
+	}
+	if hash == "" {
+		return n.readLinesFromWorkspace(ctx, source, args.StartLine, args.EndLine)
+	}
+	if n.Expansion == nil {
+		return ToolResult{Content: "rag expansion tools unavailable", IsError: true}, fmt.Errorf("expansion service nil")
 	}
 	before := 0
 	after := args.EndLine - args.StartLine
@@ -112,6 +120,9 @@ func (n *NativeExecutor) readLines(ctx context.Context, raw json.RawMessage) (To
 }
 
 func (n *NativeExecutor) adjacentChunks(ctx context.Context, raw json.RawMessage) (ToolResult, error) {
+	if n.Expansion == nil {
+		return ToolResult{Content: "rag expansion tools unavailable", IsError: true}, fmt.Errorf("expansion service nil")
+	}
 	var args struct {
 		PointID string `json:"point_id"`
 		Radius  int    `json:"radius"`
@@ -136,6 +147,31 @@ func (n *NativeExecutor) adjacentChunks(ctx context.Context, raw json.RawMessage
 		return ToolResult{Content: "failed to encode adjacent chunks", IsError: true}, err
 	}
 	return ToolResult{Content: string(out)}, nil
+}
+
+func (n *NativeExecutor) readLinesFromWorkspace(ctx context.Context, source string, startLine, endLine int) (ToolResult, error) {
+	if n.Workspace == nil {
+		return ToolResult{Content: "workspace tools unavailable", IsError: true}, fmt.Errorf("nil workspace executor")
+	}
+	pathJSON, err := json.Marshal(pathArgs{Path: source})
+	if err != nil {
+		return ToolResult{Content: "invalid path", IsError: true}, err
+	}
+	full, err := n.Workspace.Invoke(ctx, ToolCall{Name: "read_file", Arguments: pathJSON})
+	if err != nil {
+		return full, err
+	}
+	if full.IsError {
+		return full, nil
+	}
+	lines := strings.Split(full.Content, "\n")
+	if startLine > len(lines) {
+		return ToolResult{Content: "", IsError: false}, nil
+	}
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+	return ToolResult{Content: strings.Join(lines[startLine-1:endLine], "\n")}, nil
 }
 
 func (n *NativeExecutor) validateSource(source string) (string, error) {

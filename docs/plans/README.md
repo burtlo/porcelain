@@ -54,7 +54,8 @@ Linked from [`version-v0.5.md`](../version-v0.5.md).
 | [operator-model-assist-tools.md](operator-model-assist-tools.md) | Model-assist API-only tools; hard deny of developer MCP profile |
 | [indexer-embedding-model-and-workspace-purge.md](indexer-embedding-model-and-workspace-purge.md) | Operator embedding model selector; workspace delete drops vector collection |
 | [operator-workspace-search.md](operator-workspace-search.md) | Direct workspace search API, `/ui/search`, ribbon nav |
-| [embedui-settings-card-cleanup.md](embedui-settings-card-cleanup.md) | Settings feed and card component refactor |
+| [assistant-harness-workspace-search-quality.md](assistant-harness-workspace-search-quality.md) | Native chat `search` quick wins; staged lexical→semantic pipeline; optional fact store |
+| [embedui-settings-card-cleanup.md](embedui-settings-card-cleanup.md) | Settings feed and card component consistency refactor |
 
 ---
 

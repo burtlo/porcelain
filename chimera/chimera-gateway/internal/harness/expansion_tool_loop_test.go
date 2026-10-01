@@ -1,8 +1,10 @@
 package harness
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -20,6 +22,7 @@ import (
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/testsupport"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/vectorstore"
 	"github.com/lynn/porcelain/chimera/internal/config"
+	"github.com/lynn/porcelain/internal/naming"
 )
 
 // Integration: native RAG expansion tool inside the bounded harness tool loop.
@@ -117,10 +120,30 @@ func TestRunWorkspaceToolLoop_ExpansionContextAround(t *testing.T) {
 
 	msgs, _ := json.Marshal([]map[string]string{{"role": "user", "content": "expand context"}})
 	body := Body{"model": json.RawMessage(`"Dev-1.0"`), "messages": msgs}
-	env := &TurnEnvelope{SchemaVersion: 1}
+	env := &TurnEnvelope{SchemaVersion: 1, AssistantID: "Dev-1.0"}
+	var logBuf bytes.Buffer
+	tc.RouteLog = slog.New(slog.NewJSONHandler(&logBuf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	tc.RequestID = "req-expansion"
+	tc.ConversationID = "conv-expansion"
+	tc.TurnIndex = 1
 	rec := tc.W.(*httptest.ResponseRecorder)
 
 	runWorkspaceToolLoop(context.Background(), tc, env, body, &chat.ProxyOpts{})
+	logs := logBuf.String()
+	for _, slug := range []string{
+		naming.MsgHarnessToolLoopStarted,
+		naming.MsgHarnessToolModelRound,
+		naming.MsgHarnessToolInvokeStarted,
+		naming.MsgHarnessToolInvokeCompleted,
+		naming.MsgHarnessToolLoopFinished,
+	} {
+		if !strings.Contains(logs, slug) {
+			t.Fatalf("missing log slug %s in:\n%s", slug, logs)
+		}
+	}
+	if !strings.Contains(logs, `"tool_backend":"expansion"`) {
+		t.Fatalf("missing expansion backend in logs:\n%s", logs)
+	}
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())

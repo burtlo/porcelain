@@ -368,9 +368,15 @@ func (FallbackProxyStage) Run(ctx context.Context, tc *TurnContext, env *TurnEnv
 			prevCaptured(statusCode, upstreamModel, stream, body)
 		}
 	}
-	if toolExecutorEnabled(tc) {
-		runWorkspaceToolLoop(ctx, tc, env, body, opts)
-		return ErrTurnComplete
+	if toolExecutorModuleEnabled(tc) {
+		if tc.ToolExecutor == nil {
+			applyWorkspaceScope(ctx, tc, env)
+		}
+		if tc.ToolExecutor != nil {
+			runWorkspaceToolLoop(ctx, tc, env, body, opts)
+			return ErrTurnComplete
+		}
+		logToolExecutorUnavailable(tc, env)
 	}
 	if !evaluatorEnabled || evaluator.StreamPolicy == operatorstore.StreamPolicyImmediate {
 		chat.WithAssistantFallback(ctx, tc.W, tc.InitialModel, tc.Stack.Fallback, tc.Resolved.UpstreamBaseURL,

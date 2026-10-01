@@ -12,9 +12,9 @@ Auto-generated from [`internal/operatorcopy/messages.yaml`](../internal/operator
 | conversation.rag.attached |  |  | formatter:rag_attached | 1 |
 | conversation.rag.skipped |  |  | RAG retrieval was skipped for this turn (disabled, empty query, or no h… | 0 |
 | conversation.tool.router |  |  | Tool router pass completed for this chat request. | 0 |
-| conversation.tool.call_started |  |  | Gateway started executing a tool call for this conversation turn. | 0 |
-| conversation.tool.call_completed |  |  | Tool call finished successfully for this conversation turn. | 0 |
-| conversation.tool.call_failed |  |  | Tool call failed for this conversation turn. | 0 |
+| conversation.tool.call_started |  |  | Client relayed a tool-result message in the chat request (gateway does … | 0 |
+| conversation.tool.call_completed |  |  | Client tool-result message in the request looks successful. | 0 |
+| conversation.tool.call_failed |  |  | Client tool-result message in the request looks like a failure. | 0 |
 | tools.mcp.invoke |  |  | MCP tools/call completed for an assistant-bound server and tool. | 0 |
 | tools.mcp.error |  |  | MCP transport or protocol error during tools/list or tools/call. | 0 |
 | tools.policy.denied |  |  | Tool call or catalog entry blocked by assistant MCP bind or per-tool al… | 0 |
@@ -39,6 +39,13 @@ Auto-generated from [`internal/operatorcopy/messages.yaml`](../internal/operator
 | harness.escalation.completed |  |  | Evaluator escalation action completed. | 0 |
 | harness.escalation.action |  |  | Evaluator escalation action was recorded. | 0 |
 | harness.human.paste_back_merged |  |  | A user supplied external human answer was merged into the next harness … | 0 |
+| harness.tool.loop_started |  |  | Workspace harness tool loop started for this assistant turn. | 0 |
+| harness.tool.model_round |  |  | Harness tool loop finished an upstream model round and parsed tool inte… | 0 |
+| harness.tool.invoke_started |  |  | Harness workspace tool execution started (native or MCP backend). | 0 |
+| harness.tool.invoke_completed |  |  | Harness workspace tool execution completed. | 0 |
+| harness.tool.invoke_failed |  |  | Harness workspace tool execution failed. | 0 |
+| harness.tool.loop_finished |  |  | Workspace harness tool loop finished for this assistant turn. | 0 |
+| harness.tool.executor_unavailable |  |  | tool_executor is enabled but no workspace scope could be resolved to ru… | 0 |
 | conversation.rag.span |  |  | formatter:rag_collection | 0 |
 | upstream.models.ok |  |  | formatter:upstream_models_ok | 0 |
 | conversation.request.witness |  |  | Request witness logged: structured snapshot of the chat payload after n… | 0 |

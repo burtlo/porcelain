@@ -21,8 +21,8 @@ import (
 
 const maxIndexerConfigYAMLBytes = 512 << 10
 
-// operatorIndexerTenantID is the tenant scope for UI-managed workspaces until the admin session carries a principal id.
-func operatorIndexerTenantID() string { return "" }
+// operatorIndexerTenantID is the tenant scope for UI-managed workspaces (matches default API key tenant).
+func operatorIndexerTenantID() string { return "default" }
 
 func validateIndexerRootDir(rootPath string) (absRoot string, msg string, status int) {
 	rootPath = strings.TrimSpace(rootPath)

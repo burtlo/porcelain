@@ -47,6 +47,7 @@ type TurnContext struct {
 	TenantID       string
 	ProjectID      string
 	FlavorID       string
+	WorkspaceRowID int64
 	APIKey         string
 	Timeout        time.Duration
 

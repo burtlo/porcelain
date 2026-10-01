@@ -132,7 +132,7 @@ The existing `tool_router` remains an optional transform for client-declared too
 | `read_file`, `write_file`, `list_dir`, `search` | Shipped v0.4; policy via `file_action_policy` |
 | RAG expansion (`workspace_context_around`, `workspace_adjacent_chunks`, `workspace_read_lines`) | Phase 2a — native executor + `ExpansionService`; schemas at `/v1/rag/tools` |
 
-Native `search` quality improvements are an optional follow-on in the workspace-tools feature record — **not** required for MCP acceptance.
+Native `search` quality improvements are tracked in [`assistant-harness-workspace-search-quality.md`](assistant-harness-workspace-search-quality.md) — **not** required for MCP acceptance.
 
 ### Tier B — Standard MCP sidecars (Phase 2b+)
 

@@ -680,6 +680,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 
 	routeLog := chatRouteLogger(log, rid, cid, sess.TenantID, turnIdx)
 	w.Header().Set(headerConversationID, cid)
+	w.Header().Set(naming.HeaderTurnIndexTarget, strconv.Itoa(turnIdx))
 
 	if routeLog != nil {
 		msgCount := conversationwitness.RequestMessageCount(raw)
@@ -718,8 +719,12 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		return
 	}
 	if vmCtx != nil {
+		var workspaceRowID int64
+		if wid := optionalWorkspaceRowID(r); wid != nil {
+			workspaceRowID = *wid
+		}
 		if handleAssistantChat(ctx, w, rt, res, vmCtx, raw, stream, skipToolRouter, headerToolThresh, routeLog,
-			cid, turnIdx, rid, sess.TenantID, proj, flav, apiKey, rtDur, chatOpts, histRec) {
+			cid, turnIdx, rid, sess.TenantID, proj, flav, workspaceRowID, apiKey, rtDur, chatOpts, histRec) {
 			return
 		}
 	}
