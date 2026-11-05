@@ -19,7 +19,7 @@ Assistant chat completions run inside `internal/harness`: ordered **stages** sha
 
 - Scoped assistant logs show `harness.stage.started` / `harness.stage.completed` with `stage` and `module` fields per step.
 - Settings **harness evaluate** (`POST /api/ui/assistants/{id}/harness/evaluate`) uses `PrePrimaryRunner` — no retrieval injection or upstream proxy.
-- Per-assistant harness module toggles (retrieval, intent, evaluator, escalation, tool_executor) live on the assistant card; see [operator assistants](operator-assistants.md).
+- Per-assistant harness module toggles (retrieval, intent, evaluator, escalation, tool_executor) live on the assistant card; see [operator assistants](operator-assistants.md), which also lists the modules labeled experimental.
 
 ## System behavior and contracts
 

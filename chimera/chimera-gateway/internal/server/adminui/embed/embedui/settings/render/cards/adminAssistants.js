@@ -804,13 +804,13 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminAssistants = function (ctx) {
       case "retrieval":
         return "Per-assistant RAG inject (still requires gateway search enabled).";
       case "intent":
-        return "Classify turn intent before primary completion.";
+        return "Experimental. Classify turn intent before primary completion.";
       case "evaluator":
-        return "Score primary output and apply the selected stream policy.";
+        return "Experimental. Score primary output and apply the selected stream policy.";
       case "escalation":
-        return "Re-retrieve or walk fallback when evaluation recommends it.";
+        return "Experimental. Re-retrieve or walk fallback when evaluation recommends it.";
       case "tool_executor":
-        return "Gateway-injected workspace tools and optional MCP sidecars (per-assistant bind and per-tool allowlist).";
+        return "Gateway-injected workspace tools and optional experimental MCP sidecars (per-assistant bind and per-tool allowlist).";
       default:
         return "";
     }
@@ -950,7 +950,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminAssistants = function (ctx) {
     }
     return (
       '<div class="sum-asst-harness-mcp" data-ui-part="assistant.harness.mcp-config">' +
-      '<p class="sg-op-card-note">MCP sidecars for this assistant (operator SQLite overrides YAML when server rows exist). Catalog rebuilds on the next harness turn after save.</p>' +
+      '<p class="sg-op-card-note">Experimental. MCP sidecars for this assistant (operator SQLite overrides YAML when server rows exist). Catalog rebuilds on the next harness turn after save.</p>' +
       '<div class="sum-metrics-table-wrap"><table class="sum-metrics-table"><thead><tr><th>Server</th><th>Health</th><th>Bind</th></tr></thead><tbody>' +
       rows +
       '</tbody></table></div><button type="button" class="sg-op-btn sg-op-btn--ghost" data-admin-action="vm-mcp-bindings-save" data-vm-id="' +

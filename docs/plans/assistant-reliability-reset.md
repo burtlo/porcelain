@@ -16,7 +16,7 @@ Make an assistant one dependable model endpoint: a coding tool or game sends one
 
 | Phase                                                                    | Outcome                                                              | Status |
 |--------------------------------------------------------------------------|----------------------------------------------------------------------|--------|
-| [Phase 0 — Consolidate and freeze](#phase-0--consolidate-and-freeze)     | One trunk; unproven modules clearly marked experimental              | `todo` |
+| [Phase 0 — Consolidate and freeze](#phase-0--consolidate-and-freeze)     | One trunk; unproven modules clearly marked experimental              | `done` |
 | [Phase 1 — Assistant contract](#phase-1--assistant-contract)             | Written behavior for every failure a client can see                  | `todo` |
 | [Phase 2 — Failure test suite](#phase-2--failure-test-suite)             | Contract proven by repeatable tests with no real LLM                 | `todo` |
 | [Phase 3 — Accurate local models](#phase-3--accurate-local-models)       | Ollama never silently loses context or leaks thinking into answers   | `todo` |
@@ -59,7 +59,7 @@ Measured on 2026-11-05 against Ollama 0.23.2 on the OpenAI-compatible endpoint: 
 - A single agreed trunk contains the harness and the current `main` work, with `make precommit` passing.
 - Existing assistants behave as before; only labels and docs change.
 
-**Status:** `todo`
+**Status:** `done`
 
 ---
 

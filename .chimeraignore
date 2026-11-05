@@ -1,0 +1,2 @@
+# Archived plans describe past delivery, not current behavior, so keep them out of RAG.
+docs/plans/archive/

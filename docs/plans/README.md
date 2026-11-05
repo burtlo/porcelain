@@ -15,6 +15,8 @@
 
 ---
 
+**Assistant quality rule:** an assistant plan with a user-facing quality claim is `done` only when it has a passing test or eval result. Shipping the code is not enough.
+
 ## Active
 
 | Plan | Feature record(s) / notes |
