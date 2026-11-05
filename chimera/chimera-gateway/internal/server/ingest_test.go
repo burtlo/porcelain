@@ -223,7 +223,7 @@ func setupRAGServerWithLog(t *testing.T, lg *slog.Logger) (*Runtime, *inMemorySt
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gwPath := filepath.Join(cfgDir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(cfgDir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, upstream.URL, []string{"m"}, "http://127.0.0.1:1")
 	tokPath := filepath.Join(cfgDir, "api-keys.yaml")
 	writeTokens(t, tokPath, "ingest-tok", "tenantA")
@@ -339,7 +339,7 @@ func TestIngest_RAGDisabled_503(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 	t.Cleanup(upstream.Close)
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, upstream.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "ten")

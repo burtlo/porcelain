@@ -46,7 +46,7 @@ func TestUIBrokerProviderHealth_endToEnd(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-chimera-broker-health", "t1")
@@ -119,7 +119,7 @@ func TestUIChimeraBrokerProviderHealth_chimeraBrokerDown(t *testing.T) {
 	dead.Close()
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, deadURL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-chimera-broker-down", "t1")
@@ -196,7 +196,7 @@ func TestUIBrokerProviderHealth_onlyOllamaConfigured_catalogFail(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-ollama-only", "t1")
@@ -272,7 +272,7 @@ func TestUIBrokerProviderHealth_requiresAuth(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-chimera-broker-auth", "t1")

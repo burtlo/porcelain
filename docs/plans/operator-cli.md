@@ -107,7 +107,7 @@ Add targets alongside existing gateway/GUI rules ([`Makefile`](../../Makefile)):
 ### Precedence (lowest → highest)
 
 1. **Built-in defaults** (compiled into the binary).
-2. **Global user config:** `~/.chimera/cli.config.yaml`  
+2. **Global user config:** `~/.chimera/cli.config.yaml`
    - Resolve home via `os.UserHomeDir()` (on Windows, `%USERPROFILE%\.chimera\cli.config.yaml`).
 3. **Local project config:** `./chimera/cli.config.yaml` relative to the **current working directory** (as specified; do not rename to `config/` without an explicit follow-up).
 4. **CLI flags:** `--host`, `--token` (and any future flags) **override** merged YAML for those fields only.
@@ -127,7 +127,7 @@ gateway_url: "http://127.0.0.1:3000"
 gateway_token: ""
 
 # BiFrost management API base (OpenAI-style upstream root), used for provider/ollama setup.
-# Default: "http://127.0.0.1:8080" to match config/gateway.yaml upstream.
+# Default: "http://127.0.0.1:8080" to match config/chimera.yaml upstream.
 bifrost_url: "http://127.0.0.1:8080"
 
 # When BiFrost dashboard auth is enabled: Basic auth or session flow — document in v0.8+
@@ -235,4 +235,4 @@ Operator commands that mutate provider keys or Ollama **must** use BiFrost’s *
 
 ---
 
-*Plan status: **draft for implementation** — v0.1 first; v0.8 adds layered config. Gateway defaults today: [`config/gateway.example.yaml`](../../config/gateway.example.yaml).*
+*Plan status: **draft for implementation** — v0.1 first; v0.8 adds layered config. Gateway defaults today: [`config/chimera.yaml`](../config/chimera.yaml).*

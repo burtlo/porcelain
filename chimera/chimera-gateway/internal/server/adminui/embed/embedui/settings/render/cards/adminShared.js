@@ -104,7 +104,9 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminShared = function (ctx) {
       '" aria-label="' +
       escapeHtml(title) +
       '"><span class="material-symbols-outlined" aria-hidden="true">' +
-      escapeHtml(String(iconName || "")) +
+      (globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function"
+        ? ChimeraMaterialIcons.char(iconName)
+        : escapeHtml(String(iconName || ""))) +
       "</span></button>"
     );
   }
@@ -191,7 +193,9 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminShared = function (ctx) {
       '<span class="material-symbols-outlined sg-op-section-icon' +
       iconCls +
       '" aria-hidden="true">' +
-      escapeHtml(icon || "dashboard") +
+      (globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function"
+        ? ChimeraMaterialIcons.char(icon || "dashboard")
+        : escapeHtml(icon || "dashboard")) +
       "</span>" +
       '<h3 class="sg-op-section-title">' +
       escapeHtml(title || "") +
@@ -288,9 +292,13 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminShared = function (ctx) {
     var labelStr = label != null ? String(label) : "";
     var inner = escapeHtml(labelStr);
     if (opts.icon) {
+      var glyph =
+        globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function"
+          ? ChimeraMaterialIcons.char(opts.icon)
+          : escapeHtml(String(opts.icon));
       inner +=
         ' <span class="material-symbols-outlined material-symbols-outlined--sm sg-op-health-pill__icon" aria-hidden="true">' +
-        escapeHtml(String(opts.icon)) +
+        glyph +
         "</span>";
     }
     var attrs = "";
@@ -786,7 +794,7 @@ globalThis.ChimeraSettings.Render.Cards.mountAdminShared = function (ctx) {
       var msg = String(f.msg || f.message || "").toLowerCase();
       var hit = false;
       if (want === "rules") {
-        hit = msg.indexOf("routing") >= 0 || msg.indexOf("virtual model") >= 0;
+        hit = msg.indexOf("routing") >= 0 || msg.indexOf("assistant") >= 0;
       } else if (want === "fallback") {
         hit = msg.indexOf("fallback") >= 0 || msg.indexOf("failover") >= 0;
       } else if (want === "router") {

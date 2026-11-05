@@ -5,12 +5,10 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"runtime"
 	"sync"
 	"time"
 
 	"github.com/lynn/porcelain/chimera/chimera-supervisor/internal/proc"
-	wruntime "github.com/lynn/porcelain/chimera/internal/wrapper/runtime"
 )
 
 // Child describes one supervised process during shutdown.
@@ -82,30 +80,27 @@ func forceStopChild(log *slog.Logger, c Child) {
 		return
 	}
 	pid := c.Cmd.Process.Pid
-	if runtime.GOOS == "windows" {
-		if err := proc.ForceKillProcessTree(pid); err != nil && log != nil {
-			log.Warn("process-tree kill failed",
-				"msg", "chimera-supervisor.shutdown.child_tree_kill_failed",
-				"child", c.Name,
-				"pid", pid,
-				"err", err)
-		}
-	} else if err := wruntime.TerminateThenKill(c.Cmd, 5*time.Second); err != nil && log != nil {
-		log.Warn("forced child stop", "msg", "chimera-supervisor.shutdown.child_force_kill_failed", "child", c.Name, "err", err)
+	// Tree kill on all platforms: Windows uses taskkill /T; Unix walks the PPID
+	// tree so wrapper backends (bifrost-http, qdrant) are not orphaned.
+	if err := proc.ForceKillProcessTree(pid); err != nil && log != nil {
+		log.Warn("process-tree kill failed",
+			"msg", "chimera-supervisor.shutdown.child_tree_kill_failed",
+			"child", c.Name,
+			"pid", pid,
+			"err", err)
+		_ = c.Cmd.Process.Kill()
 	}
 
 	select {
 	case werr := <-c.WaitCh:
 		logChildExit(log, c.Name, werr, true)
 	case <-time.After(5 * time.Second):
-		if runtime.GOOS != "windows" {
-			if err := proc.ForceKillProcessTree(pid); err != nil && log != nil {
-				log.Warn("process-tree kill fallback failed",
-					"msg", "chimera-supervisor.shutdown.child_tree_kill_failed",
-					"child", c.Name,
-					"pid", pid,
-					"err", err)
-			}
+		if err := proc.ForceKillProcessTree(pid); err != nil && log != nil {
+			log.Warn("process-tree kill fallback failed",
+				"msg", "chimera-supervisor.shutdown.child_tree_kill_failed",
+				"child", c.Name,
+				"pid", pid,
+				"err", err)
 		}
 		select {
 		case werr := <-c.WaitCh:
@@ -150,12 +145,8 @@ func KillWrapperFamilies(cmds ...*exec.Cmd) {
 			continue
 		}
 		pid := cmd.Process.Pid
-		if runtime.GOOS == "windows" {
-			if err := proc.ForceKillProcessTree(pid); err != nil {
-				_ = cmd.Process.Kill()
-			}
-			continue
+		if err := proc.ForceKillProcessTree(pid); err != nil {
+			_ = cmd.Process.Kill()
 		}
-		_ = cmd.Process.Signal(os.Interrupt)
 	}
 }

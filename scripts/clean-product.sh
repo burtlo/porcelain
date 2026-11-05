@@ -133,7 +133,7 @@ gateway)
 		echo "clean-${PRODUCT}-${MODE}: go clean -i ./chimera/chimera-gateway"
 	fi
 	if want configure; then
-		rm_paths "config/gateway.yaml"
+		rm_paths "config/chimera.yaml"
 	fi
 	if want run; then
 		rm_paths "data/gateway"

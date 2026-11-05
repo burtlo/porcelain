@@ -105,8 +105,8 @@ archives:
       - README.md
       - src: docs/packaging.md
         dst: PACKAGING.md
-      - src: config/gateway.example.yaml
-        dst: config/gateway.yaml
+      - src: config/chimera.example.yaml
+        dst: config/chimera.yaml
       - src: config/api-keys.example.yaml
         dst: config/api-keys.example.yaml
       - src: config/chimera-broker.config.json

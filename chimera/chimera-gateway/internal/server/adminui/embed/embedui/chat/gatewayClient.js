@@ -125,14 +125,41 @@
     }
   }
 
+  function parseHarnessSummaryHeader(raw) {
+    if (!raw) return null;
+    var s = String(raw).trim();
+    if (!s) return null;
+    var jsonText = s;
+    if (s.charAt(0) !== "{") {
+      try {
+        jsonText = base64ToUtf8(s);
+      } catch (_e) {
+        return null;
+      }
+    }
+    try {
+      var parsed = JSON.parse(jsonText);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (_e2) {
+      return null;
+    }
+  }
+
   function readTurnMetadata(res) {
     var upstream = res.headers.get("X-Chimera-Upstream-Model") || "";
     var ragRaw = res.headers.get("X-Chimera-RAG-Hits") || "";
     var conv = res.headers.get("X-Chimera-Conversation-Id") || "";
+    var requestId = res.headers.get("X-Request-ID") || "";
+    var turnRaw = res.headers.get("X-Chimera-Turn-Index") || "";
+    var turnIndex = parseInt(turnRaw, 10);
+    if (isNaN(turnIndex)) turnIndex = null;
     return {
       upstreamModel: upstream.trim(),
       ragHits: parseRAGHitsHeader(ragRaw),
-      conversationId: conv.trim()
+      conversationId: conv.trim(),
+      requestId: requestId.trim(),
+      turnIndex: turnIndex,
+      harnessSummary: parseHarnessSummaryHeader(res.headers.get("X-Chimera-Harness-Summary") || "")
     };
   }
 

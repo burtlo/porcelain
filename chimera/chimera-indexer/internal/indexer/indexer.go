@@ -146,7 +146,7 @@ func (ix *Indexer) FetchAndLogConfig(ctx context.Context) (*IndexerConfig, error
 		var he *HTTPError
 		if errors.As(err, &he) && he.Status == 503 && strings.Contains(strings.ToLower(he.Body), "rag is not enabled") {
 			ix.log.Error("gateway has RAG disabled; nothing for the indexer to do",
-				"hint", "set rag.enabled=true in config/gateway.yaml and restart the chimera gateway",
+				"hint", "set search.enabled=true in config/chimera.yaml and restart the chimera gateway",
 				"body", he.Body)
 			return nil, err
 		}

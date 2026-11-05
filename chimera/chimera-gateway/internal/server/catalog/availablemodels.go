@@ -51,7 +51,7 @@ type CatalogSnapshot struct {
 	// chimera-broker stops listing its models in `/v1/models`.
 	Providers   []string
 	providerSet map[string]struct{}
-	// ModelIDs is the full filtered upstream id list (without the virtual Chimera id),
+	// ModelIDs is the full filtered upstream id list (without the Chimera assistant id),
 	// retained so future auditors can answer "is model X in the live catalog?" without
 	// re-fetching.
 	ModelIDs []string

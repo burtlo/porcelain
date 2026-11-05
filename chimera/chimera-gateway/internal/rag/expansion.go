@@ -245,6 +245,26 @@ func normalizeCoherenceMode(m string) string {
 	}
 }
 
+// WorkspaceOpenAIFunctionTools returns OpenAI function tool declarations aligned with WorkspaceToolDefinitions.
+func WorkspaceOpenAIFunctionTools() []map[string]any {
+	defs := WorkspaceToolDefinitions()
+	out := make([]map[string]any, 0, len(defs))
+	for _, def := range defs {
+		name, _ := def["name"].(string)
+		desc, _ := def["description"].(string)
+		params := def["parameters"]
+		out = append(out, map[string]any{
+			"type": "function",
+			"function": map[string]any{
+				"name":        name,
+				"description": desc,
+				"parameters":  params,
+			},
+		})
+	}
+	return out
+}
+
 // WorkspaceToolDefinitions documents gateway expansion tools (Phase 7).
 func WorkspaceToolDefinitions() []map[string]any {
 	return []map[string]any{

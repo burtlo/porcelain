@@ -91,15 +91,15 @@ func (p *Policy) ReloadIfStale() {
 	}
 }
 
-// PickInitialModel returns the first upstream model id for the virtual Chimera model.
-func (p *Policy) PickInitialModel(body map[string]json.RawMessage, fallbackChain []string, virtualModelID string) (model string, via Via) {
+// PickInitialModel returns the first upstream model id for the Chimera assistant.
+func (p *Policy) PickInitialModel(body map[string]json.RawMessage, fallbackChain []string, assistantID string) (model string, via Via) {
 	p.ReloadIfStale()
 
 	var clientModel string
 	if m, ok := body["model"]; ok {
 		_ = json.Unmarshal(m, &clientModel)
 	}
-	if clientModel != virtualModelID {
+	if clientModel != assistantID {
 		return clientModel, ViaChainOnly
 	}
 
@@ -112,14 +112,14 @@ func (p *Policy) PickInitialModel(body map[string]json.RawMessage, fallbackChain
 }
 
 // PickInitialModelWithAvailability skips upstream ids the checker reports as unavailable.
-func (p *Policy) PickInitialModelWithAvailability(body map[string]json.RawMessage, fallbackChain []string, virtualModelID string, available func(string) bool) (model string, via Via) {
+func (p *Policy) PickInitialModelWithAvailability(body map[string]json.RawMessage, fallbackChain []string, assistantID string, available func(string) bool) (model string, via Via) {
 	p.ReloadIfStale()
 
 	var clientModel string
 	if m, ok := body["model"]; ok {
 		_ = json.Unmarshal(m, &clientModel)
 	}
-	if clientModel != virtualModelID {
+	if clientModel != assistantID {
 		if available == nil || available(clientModel) {
 			return clientModel, ViaChainOnly
 		}
@@ -200,7 +200,7 @@ func pickFromRules(ambiguousDefault string, rules []policyRule, lastUser int, fa
 }
 
 // EvaluatePick applies routing-policy YAML bytes and the same selection rules as Policy.PickInitialModel (no disk read).
-func EvaluatePick(policyYAML []byte, body map[string]json.RawMessage, fallbackChain []string, virtualModelID string, log *slog.Logger) (model string, via Via, err error) {
+func EvaluatePick(policyYAML []byte, body map[string]json.RawMessage, fallbackChain []string, assistantID string, log *slog.Logger) (model string, via Via, err error) {
 	if err := ValidatePolicyYAML(policyYAML); err != nil {
 		return "", "", err
 	}
@@ -213,7 +213,7 @@ func EvaluatePick(policyYAML []byte, body map[string]json.RawMessage, fallbackCh
 	if m, ok := body["model"]; ok {
 		_ = json.Unmarshal(m, &clientModel)
 	}
-	if clientModel != virtualModelID {
+	if clientModel != assistantID {
 		return clientModel, ViaChainOnly, nil
 	}
 

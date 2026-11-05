@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Chimera — Settings gallery</title>
   <script src="/ui/assets/embed-theme.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/ui/assets/fonts.css" />
+  <script src="/ui/assets/fonts/codepoints.js"></script>
   <link rel="stylesheet" href="/ui/assets/theme-tokens.css" />
   <link rel="stylesheet" href="/ui/assets/ui.css" />
   <link rel="stylesheet" href="/ui/assets/settings.css" />
+  <link rel="stylesheet" href="/ui/assets/styles/chat.css" />
   <link rel="stylesheet" href="/ui/assets/gallery/gallery-shell.css" />
 </head>
 <body class="logs-summarized styleguide-body">
@@ -21,17 +20,18 @@
     <a href="#sg-uo-users">Users &amp; tokens</a><span class="styleguide-nav-sep">·</span>
     <a href="#sg-uo-providers">Providers</a><span class="styleguide-nav-sep">·</span>
     <a href="#sg-uo-workspaces">Workspaces</a><span class="styleguide-nav-sep">·</span>
-    <a href="#sg-uo-virtual-models">Virtual models</a>
+    <a href="#sg-uo-assistants">Assistants</a><span class="styleguide-nav-sep">·</span>
+    <a href="#sg-uo-harness-observability">Harness observability</a>
   </nav>
 
   <header class="styleguide-hero">
     <h1 id="sg-unified-operator">Unified operator view (draft)</h1>
     <p>
       Prototypes for operator cards above the log stream. Card bodies under <strong>Providers</strong>,
-      <strong>Workspaces</strong>, and <strong>Virtual models</strong> are rendered by
+      <strong>Workspaces</strong>, and <strong>Assistants</strong> are rendered by
       <code>gallery/gallery-card-fixtures.js</code> using the same modules as <code>/ui/settings</code>
       (<code>render/cards/*</code>, <code>embedui/shared/*</code>). Users and scoped-log demos still use gallery-only scripts.
-      Per-VM routing, fallback, and tool-router sections live on virtual model cards (global routing cards were removed from the live feed).
+      Per-assistant routing, fallback, and tool-router sections live on assistant cards (global routing cards were removed from the live feed).
     </p>
   </header>
 
@@ -59,7 +59,7 @@
 
       <div id="sg-uo-overview" class="sum-section-label" style="scroll-margin-top:3.25rem">Overview (Main parity)</div>
       <p class="styleguide-sub" style="margin-top:0.15rem">
-        Gateway version + virtual model; composite health + per-service rows (chimera-broker, chimera-vectorstore when RAG on, indexer
+        Gateway version + assistant; composite health + per-service rows (chimera-broker, chimera-vectorstore when RAG on, indexer
         when supervised).
       </p>
       <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
@@ -211,27 +211,62 @@
 
       <div id="sg-uo-workspaces" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Workspaces</div>
       <p class="styleguide-sub" style="margin-top:0.15rem">
-        Workspace draft create card and managed operator workspace card from <code>workspaceDraft.js</code> /
-        <code>indexerWorkspace.js</code> (path editor uses <code>ChimeraShared.WorkspacePaths</code>).
+        Workspace draft create card and managed operator workspace cards from <code>workspaceDraft.js</code> /
+        <code>indexerWorkspace.js</code>, including public cloud-eligible and private no-cloud policy states.
       </p>
       <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
-        <li><code>workspace-draft.form</code> · <code>indexer-operator-workspace.summary</code> · <code>indexer-operator-workspace.toolbar</code> · <code>indexer-operator-workspace.paths</code> · <code>indexer-operator-workspace.scoped-evlog</code> · <code>indexer-stale.summary</code></li>
+        <li><code>workspace-draft.form</code> · <code>workspace-draft.policy</code> · <code>indexer-operator-workspace.summary</code> · <code>indexer-operator-workspace.toolbar</code> · <code>indexer-operator-workspace.policy</code> · <code>indexer-operator-workspace.paths</code> · <code>indexer-operator-workspace.scoped-evlog</code> · <code>indexer-stale.summary</code></li>
       </ul>
       <div class="styleguide-demo-bg sg-op-rail">
         <div id="gallery-fixture-workspace-draft" aria-live="polite"></div>
         <div id="gallery-fixture-opws" style="margin-top:0.5rem" aria-live="polite"></div>
+        <p class="styleguide-sub" style="margin-top:0.5rem">Private workspace — cloud routes off, file actions disabled:</p>
+        <div id="gallery-fixture-opws-private" aria-live="polite"></div>
+        <p class="styleguide-sub" style="margin-top:0.5rem">Automation workspace — cloud summaries only, read/write file policy:</p>
+        <div id="gallery-fixture-opws-read-write" aria-live="polite"></div>
         <div id="gallery-fixture-indexer-stale" style="margin-top:0.5rem" aria-live="polite"></div>
       </div>
 
-      <div id="sg-uo-virtual-models" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Virtual models</div>
+      <div id="sg-uo-assistants" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Assistants</div>
       <p class="styleguide-sub" style="margin-top:0.15rem">
-        Per-VM identity, fallback chain, routing policy YAML, and tool-router sections from
-        <code>adminVirtualModels.js</code> (replaces legacy global routing cards on the live feed).
+        Per-assistant identity, fallback chain, routing policy YAML, tool-router, and harness module toggles from
+        <code>adminAssistants.js</code> (replaces legacy global routing cards on the live feed).
       </p>
       <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
-        <li><code>virtual-model.summary</code> · <code>virtual-model.client-usage</code> · <code>virtual-model.identity</code> · <code>virtual-model.fallback</code> · <code>virtual-model.routing</code> · <code>virtual-model.tool-router</code> · <code>virtual-model.scoped-evlog</code></li>
+        <li><code>assistant.summary</code> · <code>assistant.client-usage</code> · <code>assistant.identity</code> · <code>assistant.fallback</code> · <code>assistant.routing</code> · <code>assistant.tool-router</code> · <code>assistant.harness</code> · <code>assistant.harness.retrieval-config</code> · <code>assistant.harness.intent-config</code> · <code>assistant.harness.evaluator-config</code> · <code>assistant.harness.escalation-config</code> · <code>assistant.harness.evaluate-result</code> · <code>assistant.scoped-evlog</code></li>
       </ul>
-      <div id="gallery-fixture-virtual-model" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Workspace tools off — pair with the read-only workspace policy above:</p>
+      <div id="gallery-fixture-assistant" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Workspace tools on (five-round default) — pair with the read/write workspace policy above:</p>
+      <div id="gallery-fixture-assistant-harness-on" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Intent LLM-assist profile:</p>
+      <div id="gallery-fixture-assistant-intent-llm" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Evaluator single pass — gate on evaluator:</p>
+      <div id="gallery-fixture-assistant-evaluator-gated" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Evaluator single pass — buffer until complete:</p>
+      <div id="gallery-fixture-assistant-evaluator-buffered" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Evaluator multi-draft — three parallel drafts, synthesized before evaluation:</p>
+      <div id="gallery-fixture-assistant-evaluator-multi-draft" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Human escalation — named surface, privacy disclosure, and paste-back delimiter:</p>
+      <div id="gallery-fixture-assistant-human-escalation" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Harness evaluate dry-run result (static fixture; no live call):</p>
+      <div class="styleguide-demo-bg sg-op-rail" data-ui-part="assistant.harness.evaluate-result">
+        <pre class="sum-mono-id" style="padding:0.75rem;white-space:pre-wrap">{"ok":true,"envelope":{"intent":{"task_type":"code","complexity":"medium","tags":["code","complexity_medium","workspace"]},"plan":{"stages":["stack_resolve","meta_policy","intent"]}}}</pre>
+      </div>
+
+      <div id="sg-uo-harness-observability" class="sum-section-label" style="margin-top:1.25rem;scroll-margin-top:3.25rem">Harness observability</div>
+      <p class="styleguide-sub">Conversation timeline and chat Turn details render with the same production card and message helpers.</p>
+      <ul class="styleguide-part-slugs" aria-label="Part slugs in this demo">
+        <li><code>conversation.harness-timeline</code> · <code>chat.turn-details</code></li>
+      </ul>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Conversation card — retrieval, primary, and evaluator stages:</p>
+      <div id="gallery-fixture-conversation-harness" class="styleguide-demo-bg sg-op-rail" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Chat Turn details — collapsed:</p>
+      <div id="gallery-fixture-chat-turn-details-collapsed" class="styleguide-demo-bg" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Chat Turn details — expanded:</p>
+      <div id="gallery-fixture-chat-turn-details-expanded" class="styleguide-demo-bg" aria-live="polite"></div>
+      <p class="styleguide-sub" style="margin-top:0.35rem">Human escalation response — paste an external answer after the delimiter on the next turn:</p>
+      <div id="gallery-fixture-chat-human-escalation" class="styleguide-demo-bg" aria-live="polite"></div>
 
     </section>
   </div>
@@ -239,6 +274,8 @@
   <script src="/ui/assets/settings/testing/loader.js" defer></script>
   <script src="/ui/assets/ui/util/escape.js" defer></script>
   <script src="/ui/assets/settings/util/hash.js" defer></script>
+  <script src="/ui/assets/settings/derive/conversationBroker.js" defer></script>
+  <script src="/ui/assets/settings/derive/conversationCardModel.js" defer></script>
   <script src="/ui/assets/settings/render/sumEvlog.js" defer></script>
   <script src="/ui/assets/settings/render/cardChrome.js" defer></script>
   <script src="/ui/assets/shared/operatorFeedback.js" defer></script>
@@ -260,7 +297,7 @@
   <script src="/ui/assets/settings/render/cards/adminShared.js" defer></script>
   <script src="/ui/assets/settings/render/cards/adminUsers.js" defer></script>
   <script src="/ui/assets/settings/render/cards/adminProvider.js" defer></script>
-  <script src="/ui/assets/settings/render/cards/adminVirtualModels.js" defer></script>
+  <script src="/ui/assets/settings/render/cards/adminAssistants.js" defer></script>
   <script src="/ui/assets/settings/render/cards/workspaceDraft.js" defer></script>
   <script src="/ui/assets/settings/render/cards/feedLogConv.js" defer></script>
   <script src="/ui/assets/settings/render/cards/serviceFeed/registry.js" defer></script>
@@ -275,6 +312,9 @@
   <script src="/ui/assets/settings/render/cards/indexerWorkspace.js" defer></script>
   <script src="/ui/assets/settings/render/cards/ragEmbedding.js" defer></script>
   <script src="/ui/assets/settings/render/cards/mount.js" defer></script>
+  <script src="/ui/assets/chat/render/markdown.js" defer></script>
+  <script src="/ui/assets/chat/render/snippet.js" defer></script>
+  <script src="/ui/assets/chat/render/messages.js" defer></script>
   <script src="/ui/assets/gallery/gallery-parts.js" defer></script>
   <script src="/ui/assets/gallery/gallery-card-fixtures.js" defer></script>
   <script src="/ui/assets/gallery/gallery-evlog-markup.js" defer></script>

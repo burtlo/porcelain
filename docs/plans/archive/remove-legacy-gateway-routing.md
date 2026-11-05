@@ -8,7 +8,7 @@
 | **Targets** | Gateway next minor after virtual models ship |
 | **Last updated** | See git history |
 | **Supersedes / superseded by** | Completes Phase 5 follow-up in [`virtual-models-operator.md`](virtual-models-operator.md); supersedes global routing sections in [`configuration.md`](../../configuration.md) |
-| **As-built** | [`operator-virtual-models.md`](../../features/operator-virtual-models.md), [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md) |
+| **As-built** | [`operator-assistants.md`](../../features/operator-assistants.md), [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md) |
 
 ## At a glance
 
@@ -46,7 +46,7 @@ Virtual models in operator SQLite are the routing source of truth today, but `ga
 - **No virtual model** → client sends an upstream id (`groq/...`, `gemini/...`, `ollama/...`); gateway proxies directly to chimera-broker with no fallback walk or tool-router slimming.
 - **Fresh install** → operator DB starts with **zero** virtual models; no auto-import from `gateway.yaml`.
 
-**Related docs:** [`operator-virtual-models.md`](../../features/operator-virtual-models.md), [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md), [`operator-provider-model-availability.md`](../../features/operator-provider-model-availability.md), [`configuration.md`](../../configuration.md).
+**Related docs:** [`operator-assistants.md`](../../features/operator-assistants.md), [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md), [`operator-provider-model-availability.md`](../../features/operator-provider-model-availability.md), [`configuration.md`](../../configuration.md).
 
 **Non-goals:** Changing virtual model CRUD APIs, per-VM generate/evaluate flows, RAG scoping, or provider availability semantics.
 
@@ -139,7 +139,7 @@ Virtual models in operator SQLite are the routing source of truth today, but `ga
 - **`catalog-write-limits`:** stop calling `cataloglimits.LoadFallbackChain(gateway.yaml)`; accept explicit `--ensure` model list, catalog snapshot, or optional operator SQLite VM chains.
 - Delete `cataloglimits.LoadFallbackChain` if unused after CLI update.
 - Update [`configuration.md`](../../configuration.md): remove global routing tables; document VM-only routing and direct upstream ids.
-- Update [`operator-virtual-models.md`](../../features/operator-virtual-models.md): remove "Legacy YAML" row; state bootstrap no longer imports YAML; note fresh installs start with zero VMs.
+- Update [`operator-assistants.md`](../../features/operator-assistants.md): remove "Legacy YAML" row; state bootstrap no longer imports YAML; note fresh installs start with zero VMs.
 - Update [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md) if it references global YAML stages.
 - Add **As-built** link in this plan's front matter when shipped; add row to [`docs/plans/README.md`](../README.md) shipped table.
 - Run verification commands from virtual models feature record plus:
@@ -185,6 +185,6 @@ Resolved for this plan:
   - `embed/embedui/settings/render/cards/adminVirtualModels.js`
 - Docs:
   - [`configuration.md`](../../configuration.md)
-  - [`operator-virtual-models.md`](../../features/operator-virtual-models.md)
+  - [`operator-assistants.md`](../../features/operator-assistants.md)
   - [`gateway-chat-routing-pipeline.md`](../../features/gateway-chat-routing-pipeline.md)
 - Prior plan: [`virtual-models-operator.md`](virtual-models-operator.md) Phase 5 deliverable *"Remove dual-write to gateway.yaml from generate handlers after one release with bootstrap"*

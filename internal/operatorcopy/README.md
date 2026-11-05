@@ -5,6 +5,7 @@ Canonical structured-log slugs, legacy aliases, and English operator copy for th
 | Artifact | Role |
 |----------|------|
 | `messages.yaml` | Source of truth (embedded; validated by `go generate`) |
+| `docs/generated/log-slug-index.md` | Agent slug index (generated; see [`docs/generated/README.md`](../../docs/generated/README.md)) |
 | `bootstrap_registry.go` | Go catalog used to regenerate YAML (`go run ./cmd/bootstrap`) |
 | `inventory-report.txt` | Last inventory diff (`scripts/operatorcopy-inventory.ps1 -WriteReport`) |
 
@@ -17,11 +18,11 @@ Canonical structured-log slugs, legacy aliases, and English operator copy for th
 ## Commands
 
 ```bash
-go generate ./internal/operatorcopy/...   # validate messages.yaml + write embedui/settings/operator_copy.js
+go generate ./internal/operatorcopy/...   # validate messages.yaml + write operator_copy.js + log-slug-index.md
 go test ./internal/operatorcopy/...
 go run ./internal/operatorcopy/cmd/bootstrap   # rewrite messages.yaml from bootstrap_registry.go
-make contracts-generate   # bootstrap + generate (Phase 2+)
-make contracts-check      # stale check for operator_copy.js
+make contracts-generate   # bootstrap + generate (Phase 2+); alias: make operator-contracts-generate
+make contracts-check      # stale checks for operator_copy.js, log_messages.go, log-slug-index.md
 ```
 
 ```powershell

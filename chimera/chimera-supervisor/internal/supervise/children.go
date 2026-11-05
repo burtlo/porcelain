@@ -32,7 +32,7 @@ func startGatewayChild(cfg svconfig.Config, path, controlBaseURL string, logStor
 	if cfg.WaitGateway > 0 {
 		gatewayArgs = append(gatewayArgs, "-startup-timeout", cfg.WaitGateway.String())
 	}
-	if res, err := gwconfig.LoadGatewayYAML(path, nil); err == nil && res != nil {
+	if res, err := gwconfig.LoadChimeraYAML(path, nil); err == nil && res != nil {
 		gatewayArgs = append(gatewayArgs, "-gateway-listen", res.ListenAddr())
 	}
 	gatewayArgs = WrapperArgs(gatewayArgs)
@@ -218,17 +218,24 @@ func startBrokerChild(cfg svconfig.Config, res *gwconfig.Resolved, controlBaseUR
 }
 
 func startIndexerChild(res *gwconfig.Resolved, cfg svconfig.Config, path, controlBaseURL string, logStore *servicelogs.Store, logLevel slog.Level, log *slog.Logger, indexerCtx context.Context, indexerProc **exec.Cmd, indexerWait *chan error) {
-	idxScope := res.IndexerSupervisedEnabled && (res.RAG.Enabled || res.IndexerSupervisedStartWhenRAGDisabled)
-	if !idxScope {
+	if res == nil || !res.IndexerEnabled {
 		if log != nil {
-			log.Info("indexer supervised disabled", "msg", "chimera-supervisor.indexer.skipped",
-				"supervised_enabled", res.IndexerSupervisedEnabled,
-				"rag_enabled", res.RAG.Enabled,
-				"start_when_rag_disabled", res.IndexerSupervisedStartWhenRAGDisabled)
+			log.Info("indexer suite disabled", "msg", "chimera-supervisor.indexer.skipped",
+				"indexer_enabled", false)
 		}
 		return
 	}
-	idxBin := strings.TrimSpace(res.IndexerSupervisedBin)
+	matPath, merr := gwconfig.MaterializeIndexerConfig(res)
+	if merr != nil {
+		if log != nil {
+			log.Warn("indexer materialize failed", "msg", "chimera-supervisor.indexer.start_failed", "err", merr)
+		}
+		return
+	}
+	idxBin := strings.TrimSpace(res.IndexerBin)
+	if idxBin == "" {
+		idxBin = strings.TrimSpace(res.IndexerSupervisedBin)
+	}
 	if idxBin == "" {
 		idxBin = svconfig.DefaultIndexerBin()
 	}
@@ -243,13 +250,13 @@ func startIndexerChild(res *gwconfig.Resolved, cfg svconfig.Config, path, contro
 		log.Warn("indexer gateway token missing", "msg", "chimera-supervisor.indexer.token_missing",
 			"hint", "set CHIMERA_GATEWAY_TOKEN or add api-keys.yaml rows")
 	}
-	idxLogJSON := res.IndexerSupervisedLogJSON || cfg.LogJSON
+	idxLogJSON := res.IndexerLogJSON || cfg.LogJSON
 	childEnv := ChildEnv(controlBaseURL)
 	if gwToken != "" {
 		childEnv[naming.EnvGatewayTokenTarget] = gwToken
 	}
 	cmd, ierr := StartIndexer(indexerCtx, IndexerConfig{
-		Bin: idxBin, ConfigPath: res.IndexerSupervisedConfigPath, WorkDir: wd, GatewayURL: gwLocal, GatewayToken: gwToken,
+		Bin: idxBin, ConfigPath: matPath, WorkDir: wd, GatewayURL: gwLocal, GatewayToken: gwToken,
 		LogJSON: idxLogJSON, Stdout: idxSink, Stderr: idxSink, Env: childEnv,
 	}, log)
 	if ierr != nil {

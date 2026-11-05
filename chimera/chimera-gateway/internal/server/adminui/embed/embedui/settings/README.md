@@ -65,13 +65,13 @@ Optional (Phase 6+): `describe*(card, ctx)` for operator chat context — same p
 
 Cards on the live rail must appear in [`summarized/model.js`](summarized/model.js) with a `kind` and `id`, and in `renderSummarizedCardFromModel` (`app/summarizedFeed.js`). Section labels use `kind: "section-break"` rows.
 
-Gateway routing, fallback, and tool-router UI live **inside** virtual model cards (`adminVirtualModels.js`); handlers in `handlers/virtualModelsAdmin.js`.
+Gateway routing, fallback, and tool-router UI live **inside** assistant cards (`adminAssistants.js`); handlers in `handlers/assistantsAdmin.js`.
 
 ### Draft and edit mode
 
-- Draft arrays on `ctx` (`adminUserDrafts`, `virtualModelDrafts`, `workspaceDrafts`, …).
-- Per-card edit flags (`adminProviderModelsEditingId`, `virtualModelUi[vmId].routingEditing`, …).
-- Actions via `data-admin-action` on buttons; handlers in `handlers/admin.js`, `handlers/virtualModelsAdmin.js`, `handlers/providerModelsAdmin.js`.
+- Draft arrays on `ctx` (`adminUserDrafts`, `assistantDrafts`, `workspaceDrafts`, …).
+- Per-card edit flags (`adminProviderModelsEditingId`, `assistantUi[vmId].routingEditing`, …).
+- Actions via `data-admin-action` on buttons; handlers in `handlers/admin.js`, `handlers/assistantsAdmin.js`, `handlers/providerModelsAdmin.js`.
 - Full rebuild is skipped while interaction guards are active (`summarizedPanelInteractionBlocksRebuild`, edit-mode checks in the feed).
 
 Convention tables: [`CARD_INVENTORY.md` § Draft and edit-state](CARD_INVENTORY.md#draft-and-edit-state-conventions-ctx).

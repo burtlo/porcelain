@@ -52,7 +52,7 @@ func handleMetricsGET(h *handler.Handler, w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if st == nil {
-		out.Message = "Metrics SQLite is not open (disabled in " + naming.GatewayConfigFileTarget + ", init failure, or metrics.enabled: false). Check gateway startup logs."
+		out.Message = "Metrics SQLite is not open (disabled in " + naming.ChimeraConfigFileTarget + ", init failure, or metrics.enabled: false). Check gateway startup logs."
 		writeMetrics(w, out)
 		return
 	}

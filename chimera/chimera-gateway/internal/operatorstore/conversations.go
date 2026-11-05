@@ -42,15 +42,16 @@ type ListConversationsFilter struct {
 
 // AppendTurnInput is one persisted message row.
 type AppendTurnInput struct {
-	Role             string
-	Content          string
-	SelectedModel    string
-	ResolvedModel    string
-	ErrorDetail      string
-	RetryUserText    string
-	PromptTokens     *int
-	CompletionTokens *int
-	TotalTokens      *int
+	Role               string
+	Content            string
+	SelectedModel      string
+	ResolvedModel      string
+	ErrorDetail        string
+	RetryUserText      string
+	PromptTokens       *int
+	CompletionTokens   *int
+	TotalTokens        *int
+	HarnessSummaryJSON string
 }
 
 // RetrievalInput is one RAG hit attached to an assistant turn.
@@ -68,20 +69,21 @@ type RetrievalInput struct {
 
 // ConversationTurn is a loaded transcript row.
 type ConversationTurn struct {
-	TurnID           string
-	ConversationID   string
-	TurnIndex        int
-	Role             string
-	Content          string
-	SelectedModel    string
-	ResolvedModel    string
-	ErrorDetail      string
-	RetryUserText    string
-	PromptTokens     sql.NullInt64
-	CompletionTokens sql.NullInt64
-	TotalTokens      sql.NullInt64
-	CreatedAt        time.Time
-	Retrievals       []ConversationRetrieval
+	TurnID             string
+	ConversationID     string
+	TurnIndex          int
+	Role               string
+	Content            string
+	SelectedModel      string
+	ResolvedModel      string
+	ErrorDetail        string
+	RetryUserText      string
+	PromptTokens       sql.NullInt64
+	CompletionTokens   sql.NullInt64
+	TotalTokens        sql.NullInt64
+	HarnessSummaryJSON string
+	CreatedAt          time.Time
+	Retrievals         []ConversationRetrieval
 }
 
 // ConversationRetrieval is a RAG hit on an assistant turn.
@@ -220,12 +222,13 @@ func (s *Store) AppendTurn(ctx context.Context, principalID, conversationID stri
 INSERT INTO conversation_turns (
 	turn_id, conversation_id, turn_index, role, content,
 	selected_model, resolved_model, error_detail, retry_user_text,
-	prompt_tokens, completion_tokens, total_tokens, created_at
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	prompt_tokens, completion_tokens, total_tokens, harness_summary_json, created_at
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		turnID, conversationID, idx, role, in.Content,
 		strings.TrimSpace(in.SelectedModel), strings.TrimSpace(in.ResolvedModel),
 		strings.TrimSpace(in.ErrorDetail), strings.TrimSpace(in.RetryUserText),
-		nullInt(in.PromptTokens), nullInt(in.CompletionTokens), nullInt(in.TotalTokens), now)
+		nullInt(in.PromptTokens), nullInt(in.CompletionTokens), nullInt(in.TotalTokens),
+		strings.TrimSpace(in.HarnessSummaryJSON), now)
 	if err != nil {
 		return "", err
 	}
@@ -381,7 +384,7 @@ FROM conversations WHERE conversation_id = ? AND principal_id = ?`,
 	rows, err := s.db.QueryContext(ctx, `
 SELECT turn_id, conversation_id, turn_index, role, content,
 	selected_model, resolved_model, error_detail, retry_user_text,
-	prompt_tokens, completion_tokens, total_tokens, created_at
+	prompt_tokens, completion_tokens, total_tokens, harness_summary_json, created_at
 FROM conversation_turns
 WHERE conversation_id = ?
 ORDER BY turn_index ASC, role ASC`, conversationID)
@@ -394,11 +397,13 @@ ORDER BY turn_index ASC, role ASC`, conversationID)
 		var t ConversationTurn
 		var pt, ct, tot sql.NullInt64
 		var tca string
+		var harnessJSON string
 		if err := rows.Scan(&t.TurnID, &t.ConversationID, &t.TurnIndex, &t.Role, &t.Content,
 			&t.SelectedModel, &t.ResolvedModel, &t.ErrorDetail, &t.RetryUserText,
-			&pt, &ct, &tot, &tca); err != nil {
+			&pt, &ct, &tot, &harnessJSON, &tca); err != nil {
 			return nil, err
 		}
+		t.HarnessSummaryJSON = harnessJSON
 		t.PromptTokens = pt
 		t.CompletionTokens = ct
 		t.TotalTokens = tot

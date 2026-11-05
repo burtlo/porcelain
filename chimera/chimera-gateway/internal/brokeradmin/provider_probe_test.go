@@ -142,12 +142,13 @@ func TestGetProviderForProbe_fallbackNegativeCacheWhenGovernanceUnavailable(t *t
 
 func TestInvalidateProviderProbeCacheFor(t *testing.T) {
 	resetProviderProbeCacheForTest(t)
+	const base = "http://broker.test"
 	probeCacheMu.Lock()
-	probeNoKeys["gemini"] = true
+	probeNoKeys[base] = map[string]bool{"gemini": true}
 	probeCacheMu.Unlock()
 
 	InvalidateProviderProbeCacheFor("gemini")
-	dec := probeDecision("gemini", nil, false)
+	dec := probeDecision(base, "gemini", nil, false)
 	if !dec.HTTPProbe {
 		t.Fatalf("expected probe after invalidate: %+v", dec)
 	}

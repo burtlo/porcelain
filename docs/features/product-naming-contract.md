@@ -6,7 +6,7 @@
 | **Areas** | All `chimera-*` / `locus-*` binaries, docs, scripts, HTTP headers |
 | **Status** | `current` |
 | **Introduced** | v0.3 naming hard cut |
-| **Originated from** | [`plans/archive/v0-3-naming-migration.md`](../plans/archive/v0-3-naming-migration.md) |
+| **Originated from** | [`plans/v0-3-naming-migration.md`](../plans/archive/v0-3-naming-migration.md) |
 | **Related features** | [Chimera wrapper binary contract](chimera-wrapper-binary-contract.md) |
 | **Depends on** | None |
 | **Last updated** | See git history |
@@ -49,7 +49,7 @@ Operators see Chimera names in the UI, logs, CLI help, and packaging. Config pat
 
 **HTTP headers (`X-Chimera-*`)**
 
-Includes `X-Chimera-Project`, `X-Chimera-Flavor-Id`, `X-Chimera-RAG-Hits`, `X-Chimera-Conversation-Id`, `X-Chimera-Upstream-Model`, `X-Chimera-Workspace-Id`, and related chat/indexer correlation headers — see `internal/naming/contracts.go` for the full list.
+Includes `X-Chimera-Project`, `X-Chimera-Flavor-Id`, `X-Chimera-RAG-Hits`, `X-Chimera-Conversation-Id`, `X-Chimera-Upstream-Model`, `X-Chimera-Workspace-Id`, `X-Chimera-Harness-Summary`, `X-Chimera-Tool-Router`, `X-Chimera-Tool-Confidence-Threshold`, and related chat/indexer correlation headers — canonical list in `internal/naming/contracts.go`; operator chat wire guide in [`configuration.md`](../configuration.md#chat-completions-client-contract).
 
 **Config / data layout**
 

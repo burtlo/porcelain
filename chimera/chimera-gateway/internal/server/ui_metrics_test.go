@@ -133,26 +133,19 @@ func TestMetricsWithWorkingStore_queryRollups(t *testing.T) {
 		}
 	}
 
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	raw := `gateway:
   semver: "0.1.0"
   listen_port: 0
   listen_host: "127.0.0.1"
+  auth:
+    api_keys: "./` + naming.APIKeysFileTarget + `"
+  metrics:
+    sqlite_path: "./data/gateway/metrics.sqlite"
+    migrations_dir: "./migrations/chimera-gateway/metrics"
 broker:
-  base_url: "` + up.URL + `"
+  url: "` + up.URL + `"
   api_key_env: "` + naming.EnvBrokerAPIKeyTarget + `"
-health:
-  timeout_ms: 2000
-  chat_timeout_ms: 60000
-paths:
-  api_keys: "./` + naming.APIKeysFileTarget + `"
-  routing_policy: "./` + naming.RoutingPolicyFileTarget + `"
-routing:
-  fallback_chain:
-    - "groq/x"
-metrics:
-  sqlite_path: "./data/gateway/metrics.sqlite"
-  migrations_dir: "./migrations/chimera-gateway/metrics"
 `
 	if err := os.WriteFile(gwPath, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)

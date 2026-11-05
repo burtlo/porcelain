@@ -29,7 +29,7 @@
 .settings-feed-column #panel-summarized .sg-op-section-action-bar,
 .settings-feed-column #panel-summarized .sg-op-rail,
 .settings-feed-column #panel-summarized .sg-op-providers-section__anchor,
-.settings-feed-column #panel-summarized .sg-op-virtual-models-section {
+.settings-feed-column #panel-summarized .sg-op-assistants-section {
   width: 100%;
   max-width: none;
   box-sizing: border-box;

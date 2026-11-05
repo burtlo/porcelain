@@ -25,7 +25,7 @@ import (
 const upstreamStreamUsageTailBytes = 512 * 1024
 
 var retryStatuses = map[int]struct{}{
-	http.StatusRequestEntityTooLarge: {}, // 413: virtual model tries next fallback (same payload)
+	http.StatusRequestEntityTooLarge: {}, // 413: assistant tries next fallback (same payload)
 	http.StatusNotFound:              {}, // 404: upstream OpenAI-compat "model not found" → try next fallback
 	http.StatusTooManyRequests:       {},
 	http.StatusInternalServerError:   {},
@@ -34,7 +34,7 @@ var retryStatuses = map[int]struct{}{
 	http.StatusGatewayTimeout:        {},
 }
 
-// fallbackFailureRecord is one failed upstream attempt during virtual-model routing.
+// fallbackFailureRecord is one failed upstream attempt during assistant routing.
 type fallbackFailureRecord struct {
 	UpstreamModel string `json:"upstream_model"`
 	Status        int    `json:"status"`
@@ -183,7 +183,7 @@ func upstreamErrorIndicatesRateLimit(status int, jsonBody []byte, errMsg string)
 	return errorTextSignalsRateLimit(upstreamErrorText(jsonBody, errMsg))
 }
 
-func shouldRetryVirtualModelFallback(status int, jsonBody []byte, errMsg string) bool {
+func shouldRetryAssistantFallback(status int, jsonBody []byte, errMsg string) bool {
 	if _, ok := retryStatuses[status]; ok {
 		return true
 	}
@@ -562,7 +562,7 @@ type ProxyOpts struct {
 	// OnResponseCaptured runs once when the upstream response body is fully known (JSON or buffered SSE).
 	OnResponseCaptured func(statusCode int, upstreamModel string, stream bool, body []byte)
 	// SuppressChatDelivery skips the automatic OnChatDelivery callback in proxyChatCompletionPayload
-	// (used by WithVirtualModelFallback, which invokes OnChatDelivery once for the overall exchange).
+	// (used by WithAssistantFallback, which invokes OnChatDelivery once for the overall exchange).
 	SuppressChatDelivery bool
 	// WitnessEmitPayloadSample enables conversation.payload.sample at trace (or debug when forced in config).
 	WitnessEmitPayloadSample bool
@@ -570,8 +570,10 @@ type ProxyOpts struct {
 	WitnessPayloadSampleMaxRunes int
 	// ModelAvailable reports whether an upstream model id is operator-marked available; nil allows all.
 	ModelAvailable func(upstreamModel string) bool
-	// VirtualModelID scopes routing.model.unavailable_skipped logs to a virtual model.
-	VirtualModelID string
+	// AssistantID scopes routing.model.unavailable_skipped logs to a assistant.
+	AssistantID string
+	// OnFallbackAttempt runs before each upstream attempt in the assistant fallback loop.
+	OnFallbackAttempt func(upstreamModel string, attempt int)
 }
 
 func notifyResponseCaptured(opts *ProxyOpts, statusCode int, upstreamModel string, stream bool, body []byte) {
@@ -1110,8 +1112,8 @@ func mustRawJSON(v any) json.RawMessage {
 	return b
 }
 
-// WithVirtualModelFallback implements src/chat.ts chatWithVirtualModelFallback.
-func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initialUpstream string, fallbackChain []string, baseURL, apiKey string, stream bool, body map[string]json.RawMessage, timeout time.Duration, log *slog.Logger, rec gatewaymetrics.Recorder, guard *providerlimits.Guard, opts *ProxyOpts) {
+// WithAssistantFallback implements src/chat.ts chatWithAssistantFallback.
+func WithAssistantFallback(ctx context.Context, w http.ResponseWriter, initialUpstream string, fallbackChain []string, baseURL, apiKey string, stream bool, body map[string]json.RawMessage, timeout time.Duration, log *slog.Logger, rec gatewaymetrics.Recorder, guard *providerlimits.Guard, opts *ProxyOpts) {
 	t0 := time.Now()
 	clientModel := clientModelFromBody(body)
 	deliver := func(st int, stream bool, nb int64) {
@@ -1154,7 +1156,15 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 	for i, upstreamModel := range chain {
 		if _, skip := excluded413[upstreamModel]; skip {
 			if log != nil {
-				log.Debug("virtual model skipping model (413 earlier this request)", "msg", "chat.routing.virtual_model_skipped", "upstreamModel", upstreamModel, "index", i)
+				logArgs := []any{
+					"msg", naming.MsgChatRoutingAssistantSkipped,
+					"upstreamModel", upstreamModel,
+					"index", i,
+				}
+				if opts != nil && opts.AssistantID != "" {
+					logArgs = append(logArgs, "assistant_id", opts.AssistantID)
+				}
+				log.Debug("assistant skipping model (413 earlier this request)", logArgs...)
 			}
 			continue
 		}
@@ -1174,8 +1184,8 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 						"index", i + 1,
 						"chainLen", len(chain),
 					}
-					if opts.VirtualModelID != "" {
-						logArgs = append(logArgs, "virtual_model_id", opts.VirtualModelID)
+					if opts.AssistantID != "" {
+						logArgs = append(logArgs, "assistant_id", opts.AssistantID)
 					}
 					log.Warn("skipping upstream model (operator unavailable)", logArgs...)
 				}
@@ -1192,6 +1202,9 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 			} else {
 				log.Debug("routing attempt", attemptArgs...)
 			}
+		}
+		if opts != nil && opts.OnFallbackAttempt != nil {
+			opts.OnFallbackAttempt(upstreamModel, i+1)
 		}
 		out, est, err := prepareChatPayload(upstreamModel, stream, body)
 		if err != nil {
@@ -1239,7 +1252,7 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 			return
 		}
 		if r.ErrMessage != "" {
-			if shouldRetryVirtualModelFallback(r.Status, nil, r.ErrMessage) && hasMoreFallbackCandidates(chain, i, excluded413) {
+			if shouldRetryAssistantFallback(r.Status, nil, r.ErrMessage) && hasMoreFallbackCandidates(chain, i, excluded413) {
 				appendFallbackFailure(&attemptFailures, upstreamModel, r.Status, nil, r.ErrMessage)
 				if upstreamErrorIndicatesRateLimit(r.Status, nil, r.ErrMessage) {
 					logRateLimitRouting(log, upstreamModel, i+1, len(chain), true, nil, r.ErrMessage)
@@ -1251,7 +1264,7 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 				}
 				continue
 			}
-			if shouldRetryVirtualModelFallback(r.Status, nil, r.ErrMessage) && !hasMoreFallbackCandidates(chain, i, excluded413) {
+			if shouldRetryAssistantFallback(r.Status, nil, r.ErrMessage) && !hasMoreFallbackCandidates(chain, i, excluded413) {
 				appendFallbackFailure(&attemptFailures, upstreamModel, r.Status, nil, r.ErrMessage)
 				break
 			}
@@ -1260,7 +1273,7 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 			return
 		}
 		if r.JSONBody != nil {
-			if shouldRetryVirtualModelFallback(r.Status, r.JSONBody, "") && hasMoreFallbackCandidates(chain, i, excluded413) {
+			if shouldRetryAssistantFallback(r.Status, r.JSONBody, "") && hasMoreFallbackCandidates(chain, i, excluded413) {
 				appendFallbackFailure(&attemptFailures, upstreamModel, r.Status, r.JSONBody, "")
 				if r.Status == http.StatusNotFound {
 					logModelNotFoundRouting(log, upstreamModel, i+1, len(chain), true, r.JSONBody)
@@ -1278,7 +1291,7 @@ func WithVirtualModelFallback(ctx context.Context, w http.ResponseWriter, initia
 				}
 				continue
 			}
-			if !shouldRetryVirtualModelFallback(r.Status, r.JSONBody, "") {
+			if !shouldRetryAssistantFallback(r.Status, r.JSONBody, "") {
 				if log != nil {
 					if len(chain) > 1 {
 						log.Info("routing resolved",

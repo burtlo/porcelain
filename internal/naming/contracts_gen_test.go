@@ -25,7 +25,7 @@ func TestGeneratedContractsJSMatchesFile(t *testing.T) {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	if string(onDisk) != want {
-		t.Fatalf("%s is stale; run: make operator-contracts-generate", path)
+		t.Fatalf("%s is stale; run: make contracts-generate", path)
 	}
 }
 

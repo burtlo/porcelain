@@ -81,7 +81,7 @@ providers:
 	}
 }
 
-func TestWithVirtualModelFallback_skipsQuotaExhaustedModel(t *testing.T) {
+func TestWithAssistantFallback_skipsQuotaExhaustedModel(t *testing.T) {
 	t.Parallel()
 	var lastModel string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +120,7 @@ providers:
 	}
 	w := httptest.NewRecorder()
 	chain := []string{"groq/exhausted", "groq/ok"}
-	WithVirtualModelFallback(context.Background(), w, "groq/exhausted", chain, up.URL, "", false, body, time.Minute, nil, nil, guard, nil)
+	WithAssistantFallback(context.Background(), w, "groq/exhausted", chain, up.URL, "", false, body, time.Minute, nil, nil, guard, nil)
 
 	if lastModel != "groq/ok" {
 		t.Fatalf("upstream should see second model, got %q", lastModel)
@@ -130,7 +130,7 @@ providers:
 	}
 }
 
-func TestWithVirtualModelFallback_allModelsDeniedByLimits_returns429(t *testing.T) {
+func TestWithAssistantFallback_allModelsDeniedByLimits_returns429(t *testing.T) {
 	t.Parallel()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("upstream should not be called")
@@ -154,13 +154,13 @@ providers:
 	}
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, guard, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, guard, nil)
 	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("want 429, got %d %s", w.Code, w.Body.String())
 	}
 }
 
-func TestWithVirtualModelFallback_413_retries_next_model(t *testing.T) {
+func TestWithAssistantFallback_413_retries_next_model(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +182,7 @@ func TestWithVirtualModelFallback_413_retries_next_model(t *testing.T) {
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"hi"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/too-big", []string{"groq/too-big", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/too-big", []string{"groq/too-big", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 || calls[0] != "groq/too-big" || calls[1] != "groq/ok" {
 		t.Fatalf("upstream calls=%v", calls)
@@ -203,7 +203,7 @@ func (r *recStub413) RecordBrokerResponse(_ time.Time, _ string, status int, _ i
 	r.out = append(r.out, status)
 }
 
-func TestWithVirtualModelFallback_413_records_metrics_per_attempt(t *testing.T) {
+func TestWithAssistantFallback_413_records_metrics_per_attempt(t *testing.T) {
 	t.Parallel()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -224,7 +224,7 @@ func TestWithVirtualModelFallback_413_records_metrics_per_attempt(t *testing.T) 
 	rec := &recStub413{}
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, rec, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, rec, nil, nil)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", w.Code)
@@ -237,7 +237,7 @@ func TestWithVirtualModelFallback_413_records_metrics_per_attempt(t *testing.T) 
 	}
 }
 
-func TestWithVirtualModelFallback_skips_duplicate_after_413(t *testing.T) {
+func TestWithAssistantFallback_skips_duplicate_after_413(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -260,7 +260,7 @@ func TestWithVirtualModelFallback_skips_duplicate_after_413(t *testing.T) {
 	chain := []string{"groq/dup", "groq/dup", "groq/after"}
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"h"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/dup", chain, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/dup", chain, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	// First dup 413; second dup index skipped without a second upstream call to groq/dup.
 	if len(calls) != 2 || calls[0] != "groq/dup" || calls[1] != "groq/after" {
@@ -271,7 +271,7 @@ func TestWithVirtualModelFallback_skips_duplicate_after_413(t *testing.T) {
 	}
 }
 
-func TestWithVirtualModelFallback_404_retries_next_model(t *testing.T) {
+func TestWithAssistantFallback_404_retries_next_model(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +293,7 @@ func TestWithVirtualModelFallback_404_retries_next_model(t *testing.T) {
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"hi"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/missing", []string{"groq/missing", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/missing", []string{"groq/missing", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 || calls[0] != "groq/missing" || calls[1] != "groq/ok" {
 		t.Fatalf("upstream calls=%v", calls)
@@ -303,7 +303,7 @@ func TestWithVirtualModelFallback_404_retries_next_model(t *testing.T) {
 	}
 }
 
-func TestWithVirtualModelFallback_404_exhausted_returns_wrapup(t *testing.T) {
+func TestWithAssistantFallback_404_exhausted_returns_wrapup(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +320,7 @@ func TestWithVirtualModelFallback_404_exhausted_returns_wrapup(t *testing.T) {
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 {
 		t.Fatalf("calls=%v", calls)
@@ -361,7 +361,7 @@ func TestWithVirtualModelFallback_404_exhausted_returns_wrapup(t *testing.T) {
 	}
 }
 
-func TestWithVirtualModelFallback_404_records_metrics_per_attempt(t *testing.T) {
+func TestWithAssistantFallback_404_records_metrics_per_attempt(t *testing.T) {
 	t.Parallel()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -382,7 +382,7 @@ func TestWithVirtualModelFallback_404_records_metrics_per_attempt(t *testing.T) 
 	rec := &recStub413{}
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, rec, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, rec, nil, nil)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", w.Code)
@@ -419,7 +419,7 @@ func TestUpstreamErrorIndicatesRateLimit(t *testing.T) {
 	}
 }
 
-func TestWithVirtualModelFallback_400_rate_limit_retries_next_model(t *testing.T) {
+func TestWithAssistantFallback_400_rate_limit_retries_next_model(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -441,7 +441,7 @@ func TestWithVirtualModelFallback_400_rate_limit_retries_next_model(t *testing.T
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"hi"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/limited", []string{"groq/limited", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/limited", []string{"groq/limited", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 || calls[0] != "groq/limited" || calls[1] != "groq/ok" {
 		t.Fatalf("upstream calls=%v", calls)
@@ -451,7 +451,7 @@ func TestWithVirtualModelFallback_400_rate_limit_retries_next_model(t *testing.T
 	}
 }
 
-func TestWithVirtualModelFallback_400_rate_limit_exhausted_returns_400_wrapup(t *testing.T) {
+func TestWithAssistantFallback_400_rate_limit_exhausted_returns_400_wrapup(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -468,7 +468,7 @@ func TestWithVirtualModelFallback_400_rate_limit_exhausted_returns_400_wrapup(t 
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 {
 		t.Fatalf("calls=%v", calls)
@@ -509,7 +509,7 @@ func TestWithVirtualModelFallback_400_rate_limit_exhausted_returns_400_wrapup(t 
 	}
 }
 
-func TestWithVirtualModelFallback_400_model_not_found_does_not_retry(t *testing.T) {
+func TestWithAssistantFallback_400_model_not_found_does_not_retry(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -526,7 +526,7 @@ func TestWithVirtualModelFallback_400_model_not_found_does_not_retry(t *testing.
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"hi"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/missing", []string{"groq/missing", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/missing", []string{"groq/missing", "groq/ok"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 1 {
 		t.Fatalf("upstream calls=%v want single attempt", calls)
@@ -536,7 +536,7 @@ func TestWithVirtualModelFallback_400_model_not_found_does_not_retry(t *testing.
 	}
 }
 
-func TestWithVirtualModelFallback_429_exhausted_returns_400_wrapup(t *testing.T) {
+func TestWithAssistantFallback_429_exhausted_returns_400_wrapup(t *testing.T) {
 	t.Parallel()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -547,7 +547,7 @@ func TestWithVirtualModelFallback_429_exhausted_returns_400_wrapup(t *testing.T)
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"x"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d body=%s", w.Code, w.Body.String())
@@ -630,15 +630,15 @@ func TestUpstreamErrorIndicatesContextOverflow(t *testing.T) {
 	}
 }
 
-func TestShouldRetryVirtualModelFallback_contextOverflow(t *testing.T) {
+func TestShouldRetryAssistantFallback_contextOverflow(t *testing.T) {
 	t.Parallel()
 	body := `{"error":{"code":"request_too_large","message":"Request too large for model"}}`
-	if !shouldRetryVirtualModelFallback(http.StatusBadRequest, []byte(body), "") {
+	if !shouldRetryAssistantFallback(http.StatusBadRequest, []byte(body), "") {
 		t.Fatal("expected retry for request_too_large")
 	}
 }
 
-func TestWithVirtualModelFallback_skipsContextBlockedModel(t *testing.T) {
+func TestWithAssistantFallback_skipsContextBlockedModel(t *testing.T) {
 	t.Parallel()
 	var lastModel string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -667,7 +667,7 @@ providers:
 
 	w := httptest.NewRecorder()
 	chain := []string{"groq/too-big", "groq/ok"}
-	WithVirtualModelFallback(context.Background(), w, "groq/too-big", chain, up.URL, "", false, largePromptBody(t), time.Minute, nil, nil, guard, nil)
+	WithAssistantFallback(context.Background(), w, "groq/too-big", chain, up.URL, "", false, largePromptBody(t), time.Minute, nil, nil, guard, nil)
 
 	if lastModel != "groq/ok" {
 		t.Fatalf("upstream should see second model, got %q", lastModel)
@@ -677,7 +677,7 @@ providers:
 	}
 }
 
-func TestWithVirtualModelFallback_skipsOperatorUnavailableModel(t *testing.T) {
+func TestWithAssistantFallback_skipsOperatorUnavailableModel(t *testing.T) {
 	t.Parallel()
 	var lastModel string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -699,9 +699,9 @@ func TestWithVirtualModelFallback_skipsOperatorUnavailableModel(t *testing.T) {
 	chain := []string{"groq/blocked", "groq/ok"}
 	opts := &ProxyOpts{
 		ModelAvailable: avail,
-		VirtualModelID: "Test-1.0.0",
+		AssistantID:    "Test-1.0.0",
 	}
-	WithVirtualModelFallback(context.Background(), w, "groq/blocked", chain, up.URL, "", false, map[string]json.RawMessage{
+	WithAssistantFallback(context.Background(), w, "groq/blocked", chain, up.URL, "", false, map[string]json.RawMessage{
 		"model": json.RawMessage(`"Test-1.0.0"`),
 	}, time.Minute, testChatLog(t), nil, nil, opts)
 
@@ -718,7 +718,7 @@ func testChatLog(t *testing.T) *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }
 
-func TestWithVirtualModelFallback_allModelsDeniedByContext_returns429(t *testing.T) {
+func TestWithAssistantFallback_allModelsDeniedByContext_returns429(t *testing.T) {
 	t.Parallel()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("upstream should not be called")
@@ -738,7 +738,7 @@ providers:
 `)
 
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, largePromptBody(t), time.Minute, nil, nil, guard, nil)
+	WithAssistantFallback(context.Background(), w, "groq/a", []string{"groq/a", "groq/b"}, up.URL, "", false, largePromptBody(t), time.Minute, nil, nil, guard, nil)
 	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("want 429, got %d %s", w.Code, w.Body.String())
 	}
@@ -759,7 +759,7 @@ providers:
 	}
 }
 
-func TestWithVirtualModelFallback_400_request_too_large_retries_next_model(t *testing.T) {
+func TestWithAssistantFallback_400_request_too_large_retries_next_model(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -781,7 +781,7 @@ func TestWithVirtualModelFallback_400_request_too_large_retries_next_model(t *te
 
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"hi"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/groq/compound-mini", []string{"groq/groq/compound-mini", "ollama/llama3.2:3b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/groq/compound-mini", []string{"groq/groq/compound-mini", "ollama/llama3.2:3b"}, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 || calls[0] != "groq/groq/compound-mini" || calls[1] != "ollama/llama3.2:3b" {
 		t.Fatalf("upstream calls=%v", calls)
@@ -791,7 +791,7 @@ func TestWithVirtualModelFallback_400_request_too_large_retries_next_model(t *te
 	}
 }
 
-func TestWithVirtualModelFallback_request_too_large_skips_duplicate_model(t *testing.T) {
+func TestWithAssistantFallback_request_too_large_skips_duplicate_model(t *testing.T) {
 	t.Parallel()
 	var calls []string
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -814,7 +814,7 @@ func TestWithVirtualModelFallback_request_too_large_skips_duplicate_model(t *tes
 	chain := []string{"groq/dup", "groq/dup", "groq/after"}
 	body := map[string]json.RawMessage{"messages": json.RawMessage(`[{"role":"user","content":"h"}]`)}
 	w := httptest.NewRecorder()
-	WithVirtualModelFallback(context.Background(), w, "groq/dup", chain, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
+	WithAssistantFallback(context.Background(), w, "groq/dup", chain, up.URL, "", false, body, time.Minute, nil, nil, nil, nil)
 
 	if len(calls) != 2 || calls[0] != "groq/dup" || calls[1] != "groq/after" {
 		t.Fatalf("calls=%v", calls)

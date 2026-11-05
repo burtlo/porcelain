@@ -6,7 +6,7 @@ Stable part slugs for operator settings cards: docs, agents, gallery overlays, a
 
 **DOM:** Production builders set `data-ui-part="{slug}"` on major regions. Gallery fixtures use the same modules, so attributes match `/ui/settings` without duplication.
 
-**Legacy:** Global `admin-routing-*` cards are gallery-only static HTML (see `settings/gallery.html` § Legacy routing demos). Per-VM routing/fallback/tool-router sections in `adminVirtualModels.js` are live.
+**Legacy:** Global `admin-routing-*` cards are gallery-only static HTML (see `settings/gallery.html` § Legacy routing demos). Per-VM routing/fallback/tool-router sections in `adminAssistants.js` are live.
 
 ## Card-level ids
 
@@ -15,8 +15,8 @@ Stable part slugs for operator settings cards: docs, agents, gallery overlays, a
 | Gateway overview | `gw-overview` | `gatewayOverview.js` |
 | Gateway usage | `gw-usage-metrics` | `gatewayUsage.js` |
 | Admin provider | `admin-provider-{providerId}` | `adminProvider.js` |
-| Virtual model | `virtual-model-{rowId}` | `adminVirtualModels.js` |
-| Virtual model draft | `virtual-model-draft-{draftId}` | `adminVirtualModels.js` |
+| Assistant | `assistant-{rowId}` | `adminAssistants.js` |
+| Assistant draft | `assistant-draft-{draftId}` | `adminAssistants.js` |
 | Workspace draft | `ws-draft-{draftId}` | `workspaceDraft.js` |
 | Indexer operator workspace | `ix-opws-{hash}` | `indexerWorkspace.js` |
 | Indexer stale snapshot | `ix-stale-{hash}` | `indexerRun.js` |
@@ -24,7 +24,7 @@ Stable part slugs for operator settings cards: docs, agents, gallery overlays, a
 | Conversation | `conv-{hash}` | `feedLogConv.js` |
 | Service | service name slug | `serviceFeed.js` |
 
-Summarized feed `kind` values align with these families (`admin-provider`, `virtual-model`, `workspace-draft`, `indexer`, …) — see [`summarized/model.js`](summarized/model.js).
+Summarized feed `kind` values align with these families (`admin-provider`, `assistant`, `workspace-draft`, `indexer`, …) — see [`summarized/model.js`](summarized/model.js).
 
 ## Parts — gateway overview
 
@@ -32,7 +32,7 @@ Summarized feed `kind` values align with these families (`admin-provider`, `virt
 |------|-------|----------|---------|
 | `gateway-overview.summary` | Card header (title, subtitle, compact health) | `<summary data-ui-part>` | `gatewayOverview.js` |
 | `gateway-overview.health-strip` | Expanded service health strip | `div[data-ui-part]` wrapping strip | `gatewayOverview.js` |
-| `gateway-overview.kv` | Version / virtual model / updated | `dl[data-ui-part].indexer-run-kv--gateway-summary` | `gatewayOverview.js` |
+| `gateway-overview.kv` | Version / assistant / updated | `dl[data-ui-part].indexer-run-kv--gateway-summary` | `gatewayOverview.js` |
 
 ## Parts — admin provider
 
@@ -45,29 +45,36 @@ Summarized feed `kind` values align with these families (`admin-provider`, `virt
 | `admin-provider.keys` | API keys or Ollama URL panel | `section.sg-op-provider-panel--keys\|endpoint` | `adminProvider.js` |
 | `admin-provider.scoped-evlog` | In-card scoped log | `.sum-evlog[data-ui-part]` | `adminShared.js` → `scopedEvlog.js` |
 
-## Parts — virtual model
+## Parts — assistant
 
 | Slug | Label | DOM hint | Builder |
 |------|-------|----------|---------|
-| `virtual-model.summary` | Card `<summary>` | `#virtual-model-{id} > summary` | `adminVirtualModels.js` |
-| `virtual-model.client-usage` | Public / enabled toggles bar | `div[data-ui-part].sum-vm-section--bar` | `adminVirtualModels.js` |
-| `virtual-model.identity` | Identity section | `details[data-ui-part][data-vm-section=identity]` | `adminVirtualModels.js` |
-| `virtual-model.fallback` | Fallback chain section | `details[data-ui-part][data-vm-section=fallback]` | `adminVirtualModels.js` |
-| `virtual-model.routing` | Routing policy section | `details[data-ui-part][data-vm-section=routing]` | `adminVirtualModels.js` |
-| `virtual-model.tool-router` | Tool router section | `details[data-ui-part][data-vm-section=router]` | `adminVirtualModels.js` |
-| `virtual-model.scoped-evlog` | Scoped routing log | `.sum-evlog[data-ui-part]` | `adminVirtualModels.js` |
+| `assistant.summary` | Card `<summary>` | `#assistant-{id} > summary` | `adminAssistants.js` |
+| `assistant.client-usage` | Public / enabled toggles bar | `div[data-ui-part].sum-asst-section--bar` | `adminAssistants.js` |
+| `assistant.identity` | Identity section | `details[data-ui-part][data-vm-section=identity]` | `adminAssistants.js` |
+| `assistant.fallback` | Fallback chain section | `details[data-ui-part][data-vm-section=fallback]` | `adminAssistants.js` |
+| `assistant.routing` | Routing policy section | `details[data-ui-part][data-vm-section=routing]` | `adminAssistants.js` |
+| `assistant.tool-router` | Tool router section | `details[data-ui-part][data-vm-section=router]` | `adminAssistants.js` |
+| `assistant.harness` | Harness module toggles | `details[data-ui-part][data-vm-section=harness]` | `adminAssistants.js` |
+| `assistant.harness.retrieval-config` | Per-VM retrieval knobs | `.sum-asst-harness-retrieval[data-ui-part]` | `adminAssistants.js` |
+| `assistant.harness.intent-config` | Intent mode and classifier model | `.sum-asst-harness-intent[data-ui-part]` | `adminAssistants.js` |
+| `assistant.harness.evaluator-config` | Evaluator mode, model, multi-draft, thresholds, and stream policy | `.sum-asst-harness-evaluator[data-ui-part]` | `adminAssistants.js` |
+| `assistant.harness.escalation-config` | Escalation budget, actions, human targets, privacy, and paste-back delimiter | `.sum-asst-harness-escalation[data-ui-part]` | `adminAssistants.js` |
+| `assistant.harness.evaluate-result` | Static dry-run envelope sample | `[data-ui-part]` in gallery | `gallery.html` |
+| `assistant.scoped-evlog` | Scoped routing log | `.sum-evlog[data-ui-part]` | `adminAssistants.js` |
 
-## Parts — virtual model draft
+## Parts — assistant draft
 
 | Slug | Label | DOM hint | Builder |
 |------|-------|----------|---------|
-| `virtual-model-draft.form` | Draft fields + actions | `.sum-body[data-ui-part]` | `adminVirtualModels.js` |
+| `assistant-draft.form` | Draft fields + actions | `.sum-body[data-ui-part]` | `adminAssistants.js` |
 
 ## Parts — workspace draft
 
 | Slug | Label | DOM hint | Builder |
 |------|-------|----------|---------|
 | `workspace-draft.form` | Project / flavor / paths | `.sum-body[data-ui-part]` | `workspaceDraft.js` |
+| `workspace-draft.policy` | Sensitivity, cloud, file-action policy | `.ws-policy-fields[data-ui-part]` | `workspaceDraft.js` |
 
 ## Parts — indexer operator workspace
 
@@ -75,6 +82,7 @@ Summarized feed `kind` values align with these families (`admin-provider`, `virt
 |------|-------|----------|---------|
 | `indexer-operator-workspace.summary` | Card header | `header.sum-card__hdr` | `indexerWorkspace.js` |
 | `indexer-operator-workspace.toolbar` | Configure / path edit toolbar | `div[data-ui-part].ws-managed-edit-controls` | `workspaceDraft.js` |
+| `indexer-operator-workspace.policy` | Sensitivity, cloud, file-action policy editor | `.ws-policy-fields[data-ui-part]` | `workspaceDraft.js` |
 | `indexer-operator-workspace.paths` | Watched paths block | `dd[data-ui-part]` (Watched paths) | `indexerRun.js` (`renderExpandedIndexer`) |
 | `indexer-operator-workspace.scoped-evlog` | Workspace-scoped log | `.sum-evlog[data-ui-part]` | `indexerRun.js` |
 
@@ -90,7 +98,9 @@ Summarized feed `kind` values align with these families (`admin-provider`, `virt
 |------|-------|---------|
 | `conversation.summary` | Conversation card header | `feedLogConv.js` |
 | `conversation.timeline` | Lifecycle timeline | `feedLogConv.js` |
+| `conversation.harness-timeline` | Per-turn harness stage pills | `feedLogConv.js` |
 | `conversation.scoped-evlog` | Scoped log | `feedLogConv.js` |
+| `chat.turn-details` | Collapsible persisted harness turn summary | `chat/render/messages.js` |
 | `service.summary` | Service card header | `serviceFeed.js` |
 | `service.scoped-evlog` | Service scoped log | `serviceFeed.js` |
 | `indexer.summary` | Indexer run card header | `indexerRun.js` |

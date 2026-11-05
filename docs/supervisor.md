@@ -76,8 +76,9 @@ After login: app shell **`/ui`**, settings and event log **`/ui/settings`**. See
 
 ## Related docs
 
+- [reference/service-map.md](reference/service-map.md) — default ports, health URLs, config paths per binary
 - [configuration.md](configuration.md) — gateway YAML, reload
 - [indexer.md](indexer.md) — indexer operator guide
 - [Internal embedding provider](features/internal-embedding-provider.md) — config, lifecycle, and health behavior
 - [network.md](network.md) — ports and traffic flow
-- Historical delivery: [`plans/archive/vectorstore-broker-wrapper-hard-cut.md`](plans/archive/vectorstore-broker-wrapper-hard-cut.md)
+- Historical delivery: [`plans/vectorstore-broker-wrapper-hard-cut.md`](plans/archive/vectorstore-broker-wrapper-hard-cut.md)

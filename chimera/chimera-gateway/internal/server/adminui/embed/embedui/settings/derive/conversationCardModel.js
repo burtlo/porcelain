@@ -195,6 +195,39 @@ function conversationTurnGroupsForExpanded(events, getFlat) {
   return groups;
 }
 
+/**
+ * Harness stage records grouped by the same turn attribution used by the expanded
+ * conversation log. Each stage's final lifecycle line wins, so retried stages
+ * remain visible without showing duplicate pills.
+ */
+function conversationHarnessStagesByTurn(events, getFlat) {
+  getFlat = typeof getFlat === "function" ? getFlat : function (p) { return (p && p.rawFlat) || {}; };
+  var groups = conversationTurnGroupsForExpanded(events, getFlat);
+  var out = [];
+  for (var gi = 0; gi < groups.length; gi++) {
+    var group = groups[gi];
+    var stages = {};
+    var order = [];
+    for (var ei = 0; ei < group.events.length; ei++) {
+      var flat = getFlat(group.events[ei].parsed);
+      var msg = convNormMsg(flat);
+      if (msg !== "harness.stage.started" && msg !== "harness.stage.completed") continue;
+      var stage = String(flat.stage || flat.module || "").trim();
+      if (!stage) continue;
+      if (!stages[stage]) {
+        stages[stage] = { name: stage, status: "started" };
+        order.push(stage);
+      }
+      stages[stage].status = msg === "harness.stage.completed" ? "completed" : "started";
+    }
+    if (!order.length) continue;
+    var entries = [];
+    for (var oi = 0; oi < order.length; oi++) entries.push(stages[order[oi]]);
+    out.push({ turnIndex: group.turnIndex, label: group.label, stages: entries });
+  }
+  return out;
+}
+
 function sortEventsForModel(events) {
   return events.slice().sort(function (a, b) {
     var sa = a.seq != null ? Number(a.seq) : 0;
@@ -406,4 +439,5 @@ globalThis.ChimeraSettings.Derive.extractConversationQdrantJoinAnchors = extract
 globalThis.ChimeraSettings.Derive.joinQdrantLineConversationMatch = joinQdrantLineConversationMatch;
 globalThis.ChimeraSettings.Derive.joinQdrantLineConversationTier = joinQdrantLineConversationTier;
 globalThis.ChimeraSettings.Derive.conversationTurnGroupsForExpanded = conversationTurnGroupsForExpanded;
+globalThis.ChimeraSettings.Derive.conversationHarnessStagesByTurn = conversationHarnessStagesByTurn;
 globalThis.ChimeraSettings.Derive.buildConversationCardModel = buildConversationCardModel;

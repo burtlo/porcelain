@@ -417,13 +417,17 @@ globalThis.ChimeraSettings.Render.Cards.mountFeedLogIndexerRun = function (ctx) 
       title != null && String(title).trim() !== ""
         ? ' title="' + escapeHtml(String(title)) + '"'
         : "";
+    var glyph =
+      globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function"
+        ? ChimeraMaterialIcons.char(icon)
+        : escapeHtml(icon);
     return (
       '<span class="sg-op-inset-well"' +
       titleAttr +
       ">" +
       escapeHtml(lab) +
       ' <span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">' +
-      escapeHtml(icon) +
+      glyph +
       "</span></span>"
     );
   }

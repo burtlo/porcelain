@@ -32,7 +32,7 @@ func NewInMemoryPolicy(raw []byte) (*InMemoryPolicy, error) {
 }
 
 // PickInitialModel mirrors Policy.PickInitialModel without disk reads.
-func (p *InMemoryPolicy) PickInitialModel(body map[string]json.RawMessage, fallbackChain []string, virtualModelID string, log *slog.Logger) (model string, via Via) {
+func (p *InMemoryPolicy) PickInitialModel(body map[string]json.RawMessage, fallbackChain []string, assistantID string, log *slog.Logger) (model string, via Via) {
 	if p == nil {
 		first := ""
 		if len(fallbackChain) > 0 {
@@ -44,7 +44,7 @@ func (p *InMemoryPolicy) PickInitialModel(body map[string]json.RawMessage, fallb
 	if m, ok := body["model"]; ok {
 		_ = json.Unmarshal(m, &clientModel)
 	}
-	if clientModel != virtualModelID {
+	if clientModel != assistantID {
 		return clientModel, ViaChainOnly
 	}
 	lastUser := lastUserMessageCharCount(body)
@@ -54,7 +54,7 @@ func (p *InMemoryPolicy) PickInitialModel(body map[string]json.RawMessage, fallb
 }
 
 // PickInitialModelWithAvailability skips upstream ids the checker reports as unavailable.
-func (p *InMemoryPolicy) PickInitialModelWithAvailability(body map[string]json.RawMessage, fallbackChain []string, virtualModelID string, available func(string) bool, log *slog.Logger) (model string, via Via) {
+func (p *InMemoryPolicy) PickInitialModelWithAvailability(body map[string]json.RawMessage, fallbackChain []string, assistantID string, available func(string) bool, log *slog.Logger) (model string, via Via) {
 	if p == nil {
 		first := firstAvailableModel(fallbackChain, available)
 		return first, ViaChainOnly
@@ -63,7 +63,7 @@ func (p *InMemoryPolicy) PickInitialModelWithAvailability(body map[string]json.R
 	if m, ok := body["model"]; ok {
 		_ = json.Unmarshal(m, &clientModel)
 	}
-	if clientModel != virtualModelID {
+	if clientModel != assistantID {
 		if available == nil || available(clientModel) {
 			return clientModel, ViaChainOnly
 		}

@@ -4,17 +4,18 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/assistants"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/auth"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/conversations"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/indexer"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/logs"
+	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/mcp"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/metrics"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/providers"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/rag"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/save"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/state"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/tokens"
-	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/api/virtualmodels"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/embed"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/handler"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/adminui/session"
@@ -36,7 +37,8 @@ func Register(mux *http.ServeMux, rt *gruntime.Runtime, log *slog.Logger, ui *se
 	tokens.Register(mux, h)
 	indexer.Register(mux, h)
 	rag.Register(mux, h)
-	virtualmodels.Register(mux, h)
+	assistants.Register(mux, h)
+	mcp.Register(mux, h)
 	conversations.Register(mux, h)
 	logs.Register(mux, h)
 }

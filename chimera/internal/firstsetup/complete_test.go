@@ -13,14 +13,14 @@ import (
 func TestComplete_openMode(t *testing.T) {
 	dir := t.TempDir()
 	tokensPath := filepath.Join(dir, naming.APIKeysFileTarget)
-	gatewayPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gatewayPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	dotenvPath := filepath.Join(dir, ".env")
-	writeGatewayYAML(t, gatewayPath, "0.0.0.0")
+	writeChimeraYAML(t, gatewayPath, "0.0.0.0")
 
 	res, err := Complete(Request{AccessMode: AccessOpen}, Options{
-		TokensPath:  tokensPath,
-		GatewayPath: gatewayPath,
-		DotenvPath:  dotenvPath,
+		TokensPath:      tokensPath,
+		ChimeraYAMLPath: gatewayPath,
+		DotenvPath:      dotenvPath,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -54,17 +54,17 @@ func TestComplete_openMode(t *testing.T) {
 func TestComplete_authenticatedManual(t *testing.T) {
 	dir := t.TempDir()
 	tokensPath := filepath.Join(dir, naming.APIKeysFileTarget)
-	gatewayPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gatewayPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	dotenvPath := filepath.Join(dir, ".env")
-	writeGatewayYAML(t, gatewayPath, "0.0.0.0")
+	writeChimeraYAML(t, gatewayPath, "0.0.0.0")
 
 	res, err := Complete(Request{
 		AccessMode: AccessAuthenticated,
 		LoginMode:  LoginManual,
 	}, Options{
-		TokensPath:  tokensPath,
-		GatewayPath: gatewayPath,
-		DotenvPath:  dotenvPath,
+		TokensPath:      tokensPath,
+		ChimeraYAMLPath: gatewayPath,
+		DotenvPath:      dotenvPath,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -108,11 +108,11 @@ func TestComplete_authenticatedAutomatic(t *testing.T) {
 	}
 }
 
-func writeGatewayYAML(t *testing.T, path, listenHost string) {
+func writeChimeraYAML(t *testing.T, path, listenHost string) {
 	t.Helper()
 	body := "gateway:\n  semver: \"0.1.0\"\n  listen_port: 3000\n  listen_host: \"" + listenHost + "\"\n" +
-		"upstream:\n  base_url: \"http://127.0.0.1:8080\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n" +
-		"paths:\n  api_keys: \"./api-keys.yaml\"\n"
+		"  auth:\n    api_keys: \"./api-keys.yaml\"\n" +
+		"broker:\n  url: \"http://127.0.0.1:8080\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n"
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}

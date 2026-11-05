@@ -29,10 +29,10 @@ type Request struct {
 
 // Options configures Complete.
 type Options struct {
-	TokensPath  string
-	GatewayPath string
-	DotenvPath  string
-	EnvKey      string
+	TokensPath      string
+	ChimeraYAMLPath string
+	DotenvPath      string
+	EnvKey          string
 }
 
 // Result is returned after a successful first-run setup.
@@ -96,9 +96,9 @@ func Complete(req Request, opts Options) (Result, error) {
 		return Result{}, fmt.Errorf("write api-keys: %w", err)
 	}
 
-	gatewayPath := strings.TrimSpace(opts.GatewayPath)
-	if access == AccessOpen && gatewayPath != "" {
-		if err := config.WriteGatewayListenHost(gatewayPath, localOnlyListenHost); err != nil {
+	chimeraPath := strings.TrimSpace(opts.ChimeraYAMLPath)
+	if access == AccessOpen && chimeraPath != "" {
+		if err := config.WriteChimeraListenHost(chimeraPath, localOnlyListenHost); err != nil {
 			return Result{}, fmt.Errorf("write gateway listen_host: %w", err)
 		}
 	}

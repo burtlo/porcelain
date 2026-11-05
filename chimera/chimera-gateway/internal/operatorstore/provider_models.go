@@ -42,7 +42,7 @@ func (s *Store) HasProviderModelAvailabilityRows(ctx context.Context) (bool, err
 	return n > 0, err
 }
 
-// ListDistinctTenantIDs returns tenant ids referenced by workspaces, virtual models, or availability rows.
+// ListDistinctTenantIDs returns tenant ids referenced by workspaces, assistants, or availability rows.
 func (s *Store) ListDistinctTenantIDs(ctx context.Context) ([]string, error) {
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
@@ -51,7 +51,7 @@ func (s *Store) ListDistinctTenantIDs(ctx context.Context) ([]string, error) {
 SELECT DISTINCT tenant_id FROM (
 	SELECT tenant_id FROM workspaces
 	UNION
-	SELECT tenant_id FROM virtual_models
+	SELECT tenant_id FROM assistants
 	UNION
 	SELECT tenant_id FROM provider_model_availability
 )`)

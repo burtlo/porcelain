@@ -379,7 +379,7 @@ func TestHealth_NoRAGProbeWhenDisabled(t *testing.T) {
 	}))
 	t.Cleanup(upstream.Close)
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, upstream.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "ten")

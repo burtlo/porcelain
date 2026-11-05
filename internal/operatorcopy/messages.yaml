@@ -36,7 +36,7 @@ formatters:
   conversation_fallback_model_not_found:
     description: willRetry-aware model not found during routing
   conversation_routing:
-    description: virtual vs passthrough routing summary
+    description: assistant vs passthrough routing summary
   conversation_routing_rate_limit:
     description: TPM rate limit during routing (service panels)
   conversation_turn_started:
@@ -185,14 +185,26 @@ messages:
     summary: Tool router pass completed for this chat request.
     gallery_preview: Tool router applied
   - slug: conversation.tool.call_started
-    summary: Gateway started executing a tool call for this conversation turn.
-    gallery_preview: Tool call started
+    summary: Client relayed a tool-result message in the chat request (gateway does not execute client tools here).
+    gallery_preview: Client tool result observed in request
   - slug: conversation.tool.call_completed
-    summary: Tool call finished successfully for this conversation turn.
-    gallery_preview: Tool call completed
+    summary: Client tool-result message in the request looks successful.
+    gallery_preview: Client tool result accepted
   - slug: conversation.tool.call_failed
-    summary: Tool call failed for this conversation turn.
-    gallery_preview: Tool call failed
+    summary: Client tool-result message in the request looks like a failure.
+    gallery_preview: Client tool result failed
+  - slug: tools.mcp.invoke
+    summary: MCP tools/call completed for an assistant-bound server and tool.
+    gallery_preview: MCP tool call completed.
+  - slug: tools.mcp.error
+    summary: MCP transport or protocol error during tools/list or tools/call.
+    gallery_preview: MCP tool backend error.
+  - slug: tools.policy.denied
+    summary: Tool call or catalog entry blocked by assistant MCP bind or per-tool allowlist.
+    gallery_preview: Tool denied by policy.
+  - slug: tools.mcp.catalog_truncated
+    summary: Merged native and MCP tool count exceeded the configured catalog cap; MCP tools were not injected.
+    gallery_preview: MCP catalog over cap · MCP tools not injected.
   - slug: conversation.broker.completed
     summary: chimera-broker request completed for this conversation turn.
     gallery_preview: chimera-broker request completed
@@ -225,6 +237,63 @@ messages:
     shape: chat.request
     metrics_counter: chatReq
     gallery_preview: Chat completion request accepted and prepared for upstream routing.
+  - slug: harness.stage.started
+    summary: Assistant harness stage started.
+    gallery_preview: Harness pipeline stage started.
+  - slug: harness.stage.completed
+    summary: Assistant harness stage completed.
+    gallery_preview: Harness pipeline stage completed.
+  - slug: harness.turn.completed
+    summary: Assistant harness turn completed with redacted envelope summary.
+    gallery_preview: Harness turn completed.
+  - slug: harness.retrieval.compress_fallback
+    summary: Retrieval summarization failed, so the gateway attached truncated evidence instead.
+    gallery_preview: Retrieval summary unavailable · using truncated evidence.
+  - slug: harness.scope.workspace_ambiguous
+    summary: Multiple workspaces matched the request scope; the lowest workspace id was selected.
+    gallery_preview: Multiple workspace scopes matched · using the earliest workspace.
+  - slug: harness.stream.policy_applied
+    summary: Evaluator stream policy was applied to the assistant chat response.
+    gallery_preview: Evaluator stream policy applied.
+  - slug: harness.evaluator.failed
+    summary: Evaluator request failed, so the gateway delivered the primary response.
+    gallery_preview: Evaluator unavailable · delivering the primary response.
+  - slug: harness.multi_draft.phase
+    summary: A multi-draft evaluator phase completed with its draft count and participating models.
+    gallery_preview: Multi-draft synthesis phase completed.
+  - slug: harness.escalation.started
+    summary: Evaluator escalation action started.
+    gallery_preview: Escalation started.
+  - slug: harness.escalation.completed
+    summary: Evaluator escalation action completed.
+    gallery_preview: Escalation completed.
+  - slug: harness.escalation.action
+    summary: Evaluator escalation action was recorded.
+    gallery_preview: Escalation action recorded.
+  - slug: harness.human.paste_back_merged
+    summary: A user supplied external human answer was merged into the next harness turn.
+    gallery_preview: External human answer merged into the conversation.
+  - slug: harness.tool.loop_started
+    summary: Workspace harness tool loop started for this assistant turn.
+    gallery_preview: Harness tool loop started
+  - slug: harness.tool.model_round
+    summary: Harness tool loop finished an upstream model round and parsed tool intent.
+    gallery_preview: Harness tool model round
+  - slug: harness.tool.invoke_started
+    summary: Harness workspace tool execution started (native or MCP backend).
+    gallery_preview: Harness tool invoke started
+  - slug: harness.tool.invoke_completed
+    summary: Harness workspace tool execution completed.
+    gallery_preview: Harness tool invoke completed
+  - slug: harness.tool.invoke_failed
+    summary: Harness workspace tool execution failed.
+    gallery_preview: Harness tool invoke failed
+  - slug: harness.tool.loop_finished
+    summary: Workspace harness tool loop finished for this assistant turn.
+    gallery_preview: Harness tool loop finished
+  - slug: harness.tool.executor_unavailable
+    summary: tool_executor is enabled but no workspace scope could be resolved to run native tools.
+    gallery_preview: Harness tool executor unavailable (no workspace scope)
   - slug: conversation.rag.span
     formatter: rag_collection
     gallery_preview: RAG retrieval span recorded for this conversation turn (links retrieval to the chat scope).
@@ -321,6 +390,17 @@ messages:
   - slug: gateway.catalog.fallback_unavailable_model
     formatter: gateway_catalog_fallback_unavailable_model
     gallery_preview: Unavailable model still listed in a configured fallback chain.
+  - slug: gateway.assistant.bootstrap_failed
+    summary: Assistant bootstrap failed during gateway startup.
+    gallery_preview: Assistant bootstrap failed
+  - slug: gateway.assistant.gemini_seeded
+    formatter: upstream_models_ok
+    aliases:
+      - Gemini assistant seeded · gemini/flash
+    gallery_preview: Gemini assistant seeded on first operator store open.
+  - slug: gateway.assistant.reload_failed
+    summary: Assistant registry reload failed after operator store bootstrap.
+    gallery_preview: Assistant registry reload failed
   - slug: broker.http.access
     formatter: http_broker_inbound
     aliases:
@@ -351,12 +431,12 @@ messages:
   - slug: chat.routing.attempt
     formatter: broker_routing_relay
     aliases:
-      - virtual model fallback attempt
+      - assistant fallback attempt
     gallery_preview: Routing attempt · gpt-4o · attempt 2/3
   - slug: chat.routing.resolved
     formatter: broker_routing_relay
     aliases:
-      - virtual model routing resolved
+      - assistant routing resolved
     gallery_preview: Routing resolved · gpt-4o · attempt 1/1 · HTTP 200
   - slug: chat.routing.rate_limit
     formatter: conversation_routing_rate_limit
@@ -364,6 +444,11 @@ messages:
   - slug: chat.routing.model_not_found
     formatter: conversation_fallback_model_not_found
     gallery_preview: Model not found (404) · trying next in chain.
+  - slug: chat.routing.assistant_skipped
+    formatter: broker_routing_relay
+    aliases:
+      - assistant skipped (413 excluded)
+    gallery_preview: Skipping upstream model excluded after HTTP 413 on this request.
   - slug: routing.model.unavailable_skipped
     formatter: broker_routing_relay
     aliases:

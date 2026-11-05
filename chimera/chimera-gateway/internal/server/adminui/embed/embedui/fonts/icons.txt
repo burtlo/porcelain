@@ -1,0 +1,44 @@
+# Hand-maintained Material Symbols Outlined icon names used by the operator UI.
+# One name per line. After editing, run: make adminui-fonts
+#
+# Names must exist in Google's Material Symbols codepoints map:
+#   https://github.com/google/material-design-icons
+
+add_2
+bookmark_star
+cancel
+check_circle
+chevron_right
+content_copy
+dashboard
+database
+database_search
+database_upload
+delete_forever
+dns
+edit
+edit_square
+error
+face_3
+filter_list
+forum
+hub
+info
+keep
+key
+manage_search
+network_intel_node
+network_intelligence
+north
+note_stack
+readiness_score
+refresh
+search
+settings
+side_navigation
+stacks
+straighten
+sync
+text_snippet
+warning
+water_drop

@@ -90,7 +90,7 @@ cp "$ROOT/locus/bin/$DESKTOP_BIN" "$OUT_BIN/${LOCUS_DESKTOP_BIN_BASE}${ext}"
 cp "$bifrost_path" "$OUT_BIN/$BIF"
 cp "$qdrant_path" "$OUT_BIN/$QDR"
 
-cp "$ROOT/config/gateway.example.yaml" "$OUT/locus/config/gateway.yaml"
+cp "$ROOT/config/chimera.example.yaml" "$OUT/locus/config/chimera.yaml"
 cp "$ROOT/config/api-keys.example.yaml" "$OUT/locus/config/api-keys.example.yaml"
 cp "$ROOT/config/chimera-broker.config.json" "$OUT/locus/config/chimera-broker.config.json"
 cp "$ROOT/config/provider-free-tier.yaml" "$OUT/locus/config/provider-free-tier.yaml"

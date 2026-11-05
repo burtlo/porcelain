@@ -19,6 +19,8 @@ Legacy routes (`/ui/logs`, `/ui/desktop`, `/ui/gallery`, …) are **not** regist
 
 | URL prefix | Directory | Notes |
 |------------|-----------|--------|
+| `/ui/assets/fonts.css` | `fonts.css` | Local `@font-face` (Hanken + Material Symbols) |
+| `/ui/assets/fonts/**` | `fonts/**` | Generated `.woff2`/`.ttf` subsets + `icons.txt` + `codepoints.js` |
 | `/ui/assets/settings.css` | `settings.css` | Style composition entry |
 | `/ui/assets/settings.js` | `settings_entry.js` | Boots `ChimeraSettings.Main()` |
 | `/ui/assets/settings/main.js` | `settings_app.js` | Main app IIFE |
@@ -50,8 +52,27 @@ embedui/
   styles/                                # CSS building blocks
   shared/                                # ChimeraShared (see shared/README.md)
   ui/                                    # ChimeraUI components
+  fonts/                                 # icons.txt (manual) + committed woff2/ttf + codepoints.js
+  fonts.css                              # @font-face entry (generated)
   scripts/                               # maintainer tools (not served)
 ```
+
+## Local fonts (offline / restricted networks)
+
+Operator UI does **not** load Google Fonts at runtime. Subsetted **Hanken Grotesk** and **Material Symbols Outlined** ship under `fonts/` and are embedded in the gateway binary.
+
+**Icon source of truth:** hand-maintained [`fonts/icons.txt`](fonts/icons.txt) (one Material Symbols name per line).
+
+| Task | Purpose |
+|------|---------|
+| Edit `fonts/icons.txt` | Add/remove icon names you use in the UI |
+| `make adminui-fonts` | Fetch sources (if needed) + rebuild subsets + `codepoints.js` |
+| `make adminui-fonts-check` | Verify generated assets match `icons.txt` |
+| `make adminui-fonts-fetch` | Download upstream TTFs into `chimera/.deps` only |
+
+**Not a hard dependency for builds:** committed `fonts/*.{woff2,ttf}` are enough for `make chimera-build`. Regeneration needs either sibling clones (`../material-design-icons`, `../fonts`), `make adminui-fonts-fetch`, or `ADMINUI_MATERIAL_ICONS_SRC` / `ADMINUI_FONTS_SRC`.
+
+Dynamic icon helpers call `ChimeraMaterialIcons.char(name)` from `fonts/codepoints.js` so the desktop webview does not rely on OpenType ligatures.
 
 ## Local iteration
 

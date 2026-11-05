@@ -25,7 +25,7 @@ Operators should **search indexed workspace content directly** — without sendi
 
 ## Background
 
-**Problem.** [`RAG().Retrieve()`](../../chimera/chimera-gateway/internal/rag/service.go) already embeds the query and searches Qdrant with score threshold and top-k. Chat attaches hits only when formatting yields non-empty context ([`virtualmodel_chat.go`](../../chimera/chimera-gateway/internal/server/virtualmodel_chat.go)). Operators validating indexing during setup or debugging retrieval need **deterministic, hit-level feedback** without model latency or confidence masking.
+**Problem.** [`RAG().Retrieve()`](../../chimera/chimera-gateway/internal/rag/service.go) already embeds the query and searches Qdrant with score threshold and top-k. Chat attaches hits only when formatting yields non-empty context (harness retrieval stage via [`assistant_chat.go`](../../chimera/chimera-gateway/internal/server/assistant_chat.go)). Operators validating indexing during setup or debugging retrieval need **deterministic, hit-level feedback** without model latency or confidence masking.
 
 **Related docs:** [`gateway-rag-ingest-and-retrieval.md`](../features/gateway-rag-ingest-and-retrieval.md), [`operator-chat-ui.md`](../features/operator-chat-ui.md), [`operator-left-navigation-ribbon.md`](../features/operator-left-navigation-ribbon.md), [`version-v0.3.md`](../version-v0.3.md) (setup wizard step 6), [`indexer-workspaces.md`](../features/indexer-workspaces.md).
 

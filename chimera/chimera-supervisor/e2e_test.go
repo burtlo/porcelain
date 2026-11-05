@@ -106,7 +106,7 @@ type supervisorProc struct {
 func startSupervisorProcess(t *testing.T, supervisorBin, fakeWrapper string, args []string, extraEnv map[string]string, internalEmbedding ...bool) *supervisorProc {
 	t.Helper()
 	dir := t.TempDir()
-	gatewayPath := filepath.Join(dir, "gateway.yaml")
+	gatewayPath := filepath.Join(dir, "chimera.yaml")
 	tokensPath := filepath.Join(dir, "api-keys.yaml")
 	routingPath := filepath.Join(dir, "routing-policy.yaml")
 	if err := os.WriteFile(tokensPath, []byte("api_keys:\n  - secret: \"tok\"\n    tenant_id: \"t\"\n"), 0o644); err != nil {
@@ -116,10 +116,8 @@ func startSupervisorProcess(t *testing.T, supervisorBin, fakeWrapper string, arg
 		t.Fatal(err)
 	}
 	raw := "gateway:\n  semver: \"0.1.0\"\n  listen_port: 0\n  listen_host: \"127.0.0.1\"\n" +
-		"upstream:\n  base_url: \"http://127.0.0.1:8080\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n" +
-		"health:\n  timeout_ms: 1000\n  chat_timeout_ms: 60000\n" +
-		"paths:\n  tokens: \"" + strings.ReplaceAll(tokensPath, "\\", "/") + "\"\n  routing_policy: \"" + strings.ReplaceAll(routingPath, "\\", "/") + "\"\n" +
-		"routing:\n  fallback_chain:\n    - \"fake/model\"\n"
+		"  auth:\n    api_keys: \"" + strings.ReplaceAll(tokensPath, "\\", "/") + "\"\n" +
+		"broker:\n  url: \"http://127.0.0.1:8080\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n"
 	embedEndpoint := "127.0.0.1:" + allocPort(t)
 	if len(internalEmbedding) > 0 && internalEmbedding[0] {
 		raw += "internal_embedding:\n  enabled: true\n  provider: \"internal\"\n  model: \"internal/nomic-embed-text\"\n  dim: 3\n  base_url: \"http://" + embedEndpoint + "\"\n  model_path: \"./fake.gguf\"\n"

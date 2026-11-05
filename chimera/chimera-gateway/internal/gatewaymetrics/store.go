@@ -70,7 +70,7 @@ func (s *Store) DB() *sql.DB {
 }
 
 // RecordBrokerResponse records one chimera-broker HTTP outcome (per plan §3.6.3–3.6.4): one row per
-// completed broker round-trip (including each virtual-model fallback attempt). modelID is the
+// completed broker round-trip (including each assistant fallback attempt). modelID is the
 // full broker model id (e.g. groq/llama-3.3-70b-versatile). estRequestTokens is the gateway estimate
 // for the proxied JSON body (tiktoken cl100k_base in the chat path).
 func (s *Store) RecordBrokerResponse(at time.Time, modelID string, status int, estRequestTokens int) {

@@ -192,7 +192,7 @@ func (ix *Indexer) waitForRecovery(ctx context.Context) error {
 			ix.recoveryPollLog(pollN, false, true, h, nil, errProbe)
 			ix.log.Error("gateway has RAG disabled; nothing to recover",
 				"detail", h.Message, "type", h.ErrorType,
-				"hint", "set rag.enabled=true in config/gateway.yaml and restart the chimera gateway")
+				"hint", "set search.enabled=true in config/chimera.yaml and restart the chimera gateway")
 			return false, fmt.Errorf("gateway rejects ingest: %s (%s)", h.Message, h.ErrorType)
 		}
 		if h != nil && !h.IngestReady() {

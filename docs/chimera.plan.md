@@ -35,7 +35,7 @@ Future scope only; shipped behavior lives in version docs and feature records.
 | **v0.1.1** | Tool router, metrics, provider quotas | [version-v0.1.1.md](version-v0.1.1.md) |
 | **v0.2** | RAG ingest/retrieval, indexer REST, Qdrant, workspace indexer | [version-v0.2.md](version-v0.2.md) |
 | **v0.3** | Branding, onboarding, operator virtual models, SQLite operator store, desktop shell | [version-v0.3.md](version-v0.3.md) |
-| **v0.4** | Ensemble (“heavy thinking”), triggers, escalation, paste-back | [version-v0.4.md](version-v0.4.md) |
+| **v0.4** | Assistant turn harness (per-assistant stages, retrieval, workspace tools, evaluator/escalation) | [version-v0.4.md](version-v0.4.md) |
 | **v0.5** | Gateway MCP (optional); conversation archive ingestion | — |
 | **v0.7** | TLS, trust stores, `/health` hardening, rate limits, audit/redaction | — |
 | **v0.8** | Queues and priority scheduling under load | — |
@@ -65,7 +65,7 @@ Engineering task breakdown: [plans/README.md](plans/README.md).
 
 ### Gateway turn orchestration
 
-1. **Virtual models** — Operators define one or more **virtual model ids** with per-model routing stacks (fallback, policy rules, tool router, RAG). Clients send a virtual model id for orchestrated turns; the gateway applies that stack. As-built: [operator-virtual-models](features/operator-virtual-models.md), [gateway-chat-routing-pipeline](features/gateway-chat-routing-pipeline.md).
+1. **Assistants** — Operators define one or more **assistant ids** with per-model routing stacks (fallback, policy rules, tool router, RAG). Clients send an assistant id for orchestrated turns; the gateway applies that stack. As-built: [operator-assistants](features/operator-assistants.md), [gateway-chat-routing-pipeline](features/gateway-chat-routing-pipeline.md).
 2. **Sequential fallback chain** — On upstream failure, **429**, or admission block, walk the configured **ordered** upstream model list (**fail-fast** until queue milestone — *Resilience · 2*).
 
 ---
@@ -131,7 +131,7 @@ Engineering task breakdown: [plans/README.md](plans/README.md).
 2. Network architecture ([network.md](network.md)).
 3. Installation, setup, startup ([installation.md](installation.md)).
 4. Operations commands (`make`, logs, rebuild).
-5. Configuration reference ([configuration.md](configuration.md)).
+5. Configuration reference ([configuration.md](configuration.md)), including the [chat completions client contract](configuration.md#chat-completions-client-contract).
 6. Structured logging expectations.
 7. VS Code Continue samples (`vscode-continue/`).
 

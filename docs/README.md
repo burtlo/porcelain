@@ -14,10 +14,11 @@ docs/
 ├── features/              as-built behavior (source of truth for agents)
 ├── plans/                 open work (draft / active only)
 │   └── archive/           shipped delivery history
-└── reference/             stable integration references (BiFrost, …)
+├── reference/             stable integration references (BiFrost, service map, …)
+└── generated/             curated codegen index (see generated/README.md)
 ```
 
-**Current release line: v0.3.3** — branding, operator `/ui/*`, virtual models, workspace indexer, RAG, and `chimera-supervisor` wrapper stack. Active train notes: [version-v0.3.md](version-v0.3.md). Earlier patches: [version-v0.2.md — Shipped releases](version-v0.2.md#shipped-releases-v020-through-v022).
+**Current release line: v0.4.0** (see [CURRENT.md](CURRENT.md)) — assistant turn harness, per-assistant retrieval and workspace policy, gateway workspace tools, harness observability in chat and settings. Prior trains: [version-v0.3.md](version-v0.3.md) (shipped), [version-v0.2.md](version-v0.2.md).
 
 **Operator UI:** after login, app shell at `/ui`; configuration and live logs at **`/ui/settings`**. JSON/SSE APIs under `/api/ui/*`.
 
@@ -30,7 +31,8 @@ docs/
 | [installation.md](installation.md) | Toolchains, `make chimera-install`, wrapper builds, first run |
 | [supervisor.md](supervisor.md) | `chimera-supervisor` and the wrapper stack |
 | [network.md](network.md) | Process layout, ports, traffic flow |
-| [configuration.md](configuration.md) | Gateway config files, env vars, reload semantics |
+| [reference/service-map.md](reference/service-map.md) | Binaries, default ports, health URLs, feature links |
+| [configuration.md](configuration.md) | Gateway config files, env vars, reload semantics; [chat completions client contract](configuration.md#chat-completions-client-contract) |
 | [packaging.md](packaging.md) | GoReleaser releases, artifacts, `chimera -version` |
 | [indexer.md](indexer.md) | `chimera-indexer` operator quick start |
 | [../SECURITY.md](../SECURITY.md) | Tokens, logging redaction, local attack surface |
@@ -41,7 +43,7 @@ Naming hard-cut notes live in the feature record [product-naming-contract](featu
 
 ## As-built — feature records
 
-**[`features/README.md`](features/README.md)** — platform contracts (wrappers, naming, log lines, chat pipeline) and operator features (UI, indexer, virtual models, RAG). Use these when extending or debugging shipped behavior.
+**[`features/README.md`](features/README.md)** — platform contracts (wrappers, naming, log lines, chat pipeline) and operator features (UI, indexer, assistants, RAG). Use these when extending or debugging shipped behavior.
 
 ---
 
@@ -54,6 +56,7 @@ Naming hard-cut notes live in the feature record [product-naming-contract](featu
 | [design.md](design.md) | Cognitive routing north star (not all shipped) |
 | [reference/bifrost-upstream.md](reference/bifrost-upstream.md) | BiFrost backend behind `chimera-broker` |
 | [reference/tokencount-notes.md](reference/tokencount-notes.md) | Token estimate trade-offs (design discussion) |
+| [reference/mcp-sidecar-catalog.md](reference/mcp-sidecar-catalog.md) | Blessed MCP sidecars (`fake_echo`) and Tier B templates for `chimera.yaml` |
 
 ---
 
@@ -64,9 +67,9 @@ Naming hard-cut notes live in the feature record [product-naming-contract](featu
 | v0.1 | [version-v0.1.md](version-v0.1.md) | shipped |
 | v0.1.1 | [version-v0.1.1.md](version-v0.1.1.md) | shipped |
 | v0.2 | [version-v0.2.md](version-v0.2.md) | shipped |
-| **v0.3 (current, through 0.3.3)** | [version-v0.3.md](version-v0.3.md) | active |
-| v0.4 (future) | [version-v0.4.md](version-v0.4.md) | draft |
-| v0.5 (future) | [version-v0.5.md](version-v0.5.md) | draft |
+| v0.3 | [version-v0.3.md](version-v0.3.md) | shipped |
+| **v0.4.0 (current)** | [version-v0.4.md](version-v0.4.md) | active — harness train `done`; roadmap doc `draft` until release sign-off |
+| v0.5 | [version-v0.5.md](version-v0.5.md) | draft |
 
 Template for new version docs: [_version-template.md](_version-template.md).
 

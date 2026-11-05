@@ -130,12 +130,12 @@ func handleEmbeddingPUT(h *handler.Handler, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	gwPath := h.RT.GatewayPath()
+	gwPath := h.RT.ChimeraYAMLPath()
 	if strings.TrimSpace(gwPath) == "" {
 		writeEmbeddingError(w, http.StatusInternalServerError, "gateway config path unavailable")
 		return
 	}
-	if err := config.WriteGatewayEmbeddingModel(gwPath, model, dim); err != nil {
+	if err := config.WriteChimeraEmbeddingModel(gwPath, model, dim); err != nil {
 		if h.Log != nil {
 			h.Log.Error("embedding model persist failed",
 				"msg", "gateway.operator.rag.embedding.persist_failed",

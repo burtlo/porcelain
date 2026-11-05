@@ -6,7 +6,7 @@ desktop.ini
 # Global environment variables and secrets
 .env
 config/api-keys.yaml
-config/gateway.yaml
+config/chimera.yaml
 config/indexer.yaml
 
 # Chimera config (secrets and local overrides, not for repo)

@@ -35,13 +35,17 @@ globalThis.ChimeraSettings.Render.Cards.mountGatewayUsage = function (ctx) {
   }
 
   function gatewayUsageRollupStatHtml(value, icon, title) {
+    var glyph =
+      globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function"
+        ? ChimeraMaterialIcons.char(icon)
+        : escapeHtml(icon);
     return (
       '<span class="sg-op-usage-rollup-stat" title="' +
       escapeHtml(title) +
       '">' +
       escapeHtml(value) +
       ' <span class="material-symbols-outlined material-symbols-outlined--sm sg-op-health-pill__icon" aria-hidden="true">' +
-      escapeHtml(icon) +
+      glyph +
       "</span></span>"
     );
   }

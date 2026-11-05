@@ -1,5 +1,7 @@
 package operatorapi
 
+import "encoding/json"
+
 // ConversationSummary is one row in GET /api/ui/conversations.
 type ConversationSummary struct {
 	ConversationID     string `json:"conversation_id"`
@@ -46,6 +48,7 @@ type ConversationTurn struct {
 	CompletionTokens *int                 `json:"completion_tokens,omitempty"`
 	TotalTokens      *int                 `json:"total_tokens,omitempty"`
 	RagHits          []ConversationRAGHit `json:"ragHits,omitempty"`
+	HarnessSummary   json.RawMessage      `json:"harness_summary,omitempty"`
 	CreatedAt        string               `json:"created_at"`
 }
 

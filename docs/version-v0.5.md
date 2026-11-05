@@ -22,9 +22,11 @@ The same train ships **actionable operator alerts** built from recurring upstrea
 | [Model-assisted configuration](#model-assisted-configuration)                                      | In-context prompt → model reads page guide + live state → proposes or applies fixes via authenticated APIs                              | `todo`  |
 | [Provider and model error alerts](#provider-and-model-error-alerts)                                | Aggregate structured log failures into actionable alerts (keys, availability, fallback regen)                                           | `todo`  |
 | [Optional provider/model probe](#optional-providermodel-probe)                                     | Explicit operator-triggered validation beyond catalog health; not required for setup wizard                                             | `todo`  |
-| [`plans/archive/indexer-embedding-model-and-workspace-purge.md`](plans/archive/indexer-embedding-model-and-workspace-purge.md) | Operator-selectable embedding model on indexer card; workspace delete drops vector collection                                           | `shipped` |
-| [plans/operator-workspace-search.md](plans/operator-workspace-search.md)                           | Direct workspace search in app shell (not chat-only RAG)                                                                                | `active` |
-| [`plans/archive/embedui-settings-card-cleanup.md`](plans/archive/embedui-settings-card-cleanup.md)                 | Settings feed and card component consistency refactor                                                                                   | `shipped` |
+| [plans/indexer-embedding-model-and-workspace-purge.md](plans/archive/indexer-embedding-model-and-workspace-purge.md) | Operator-selectable embedding model on indexer card; workspace delete drops vector collection                                           | `todo`  |
+| [plans/operator-workspace-search.md](plans/operator-workspace-search.md)                           | Direct workspace search in app shell (not chat-only RAG)                                                                                | `todo`  |
+| [plans/assistant-harness-workspace-search-quality.md](plans/assistant-harness-workspace-search-quality.md) | Chat native `search` improvements; staged lexical→semantic retrieval; optional per-turn fact store                         | `draft` |
+| [plans/embedui-settings-card-cleanup.md](plans/archive/embedui-settings-card-cleanup.md)                 | Settings feed and card component consistency refactor                                                                                   | `todo`  |
+| [plans/gateway-mcp-tool-backends.md](plans/gateway-mcp-tool-backends.md)                         | Harness MCP (Phases 1–2b shipped: stdio client, expansion tools, blessed `fake_echo` YAML); Phase 2c UI + workflow MCP deferred       | `todo`  |
 
 ***
 
@@ -32,7 +34,7 @@ The same train ships **actionable operator alerts** built from recurring upstrea
 
 **v0.5** is the **operator autonomy** milestone: Chimera should help operators **recover from misconfiguration** and **reach a known-good state** without reading every YAML file or spelunking logs. The gateway already skips failing models and logs routing decisions; v0.5 **closes the loop** by turning repeated failures into **alerts with next steps**, and by letting a model **read what a page means** and **call the same APIs** the settings UI uses.
 
-This builds on v0.4’s in-app configuration, workspace lifecycle, and search themes. v0.5 does **not** replace human review for destructive actions (purge, key rotation, embedding model changes) — confirmations and audit logs remain required.
+This builds on v0.4’s **assistant turn harness** (orchestration depth, per-assistant retrieval, workspace tools). v0.5 adds **MCP tool backends**, operator desired-state, and deferred configuration/search themes. v0.5 does **not** replace human review for destructive actions (purge, key rotation, embedding model changes) — confirmations and audit logs remain required.
 
 **Companion docs:** [`chimera.plan.md`](chimera.plan.md), [`configuration.md`](configuration.md), [`version-v0.3.md`](version-v0.3.md) (setup wizard + deferred validation), [`version-v0.4.md`](version-v0.4.md), [`plans/_template.md`](plans/_template.md).
 
@@ -48,21 +50,21 @@ Authoritative **architecture and numbered requirements** remain in [`chimera.pla
 
 ### Desired state vs live state
 
-- **Desired state** — What the operator configured: provider keys, model availability, virtual model stacks, workspace rows, embedding model id, routing toggles, etc. (sources: operator SQLite, `gateway.yaml`, broker management API, `api-keys.yaml` as applicable).
+- **Desired state** — What the operator configured: provider keys, model availability, assistant stacks, workspace rows, embedding model id, routing toggles, etc. (sources: operator SQLite, `chimera.yaml`, broker management API, `api-keys.yaml` as applicable).
 - **Live state** — What the running stack actually reflects after reload/sync, catalog polls, and child process health.
 - **Drift** — Documented differences (e.g. fallback chain references unavailable model, embedding model absent from catalog, indexer watching paths that fail materialize).
 
 ### Reconciliation behaviors
 
 - **Detect** — Periodic or on-demand comparison of desired vs live (extend catalog auditors, provider health strip, VM `fallback_unavailable` hints).
-- **Report** — Operator-visible summary per domain (providers, RAG/indexer, virtual models) with links to the screen that owns the fix.
+- **Report** — Operator-visible summary per domain (providers, RAG/indexer, assistants) with links to the screen that owns the fix.
 - **Remediate (guided)** — Suggest or execute **safe** fixes: regenerate VM routing from catalog, re-sync broker after key save, reload gateway config after YAML patch — always through existing authenticated APIs.
 - **Remediate (model-assisted)** — Optional path where a model proposes a remediation plan from page self-description + drift report; operator confirms before apply (see [Model-assisted configuration](#model-assisted-configuration)).
 - **Non-goals for v0.5** — Fully autonomous self-healing without confirmation; cross-host peer reconciliation; automatic corpus re-embed without explicit operator ack.
 
 **Acceptance**
 
-- Documented flow: operator introduces intentional drift (e.g. disable all Groq models) → gateway surfaces drift → guided fix restores chat for a virtual model without manual YAML editing.
+- Documented flow: operator introduces intentional drift (e.g. disable all Groq models) → gateway surfaces drift → guided fix restores chat for a assistant without manual YAML editing.
 - Reconciliation actions are logged with stable slugs and `principal_id` when applied via UI or model-assist.
 
 **Status:** `todo`
@@ -94,7 +96,7 @@ Each guide should include, at minimum:
 ### Coverage priority
 
 1. Provider cards (keys, availability, health).
-2. Virtual model cards (fallback, routing, generate).
+2. Assistant cards (fallback, routing, generate).
 3. Indexer / workspace cards (paths, embedding model, purge).
 4. Users / tokens, chimera-broker service card.
 5. Chat and workspace search surfaces.
@@ -124,7 +126,8 @@ Each guide should include, at minimum:
 
 ### Gateway responsibilities
 
-- **Virtual model routing** — Assist calls use a dedicated VM or scoped upstream model with low temperature; tool use limited to documented operator APIs (no arbitrary shell).
+- **Assistant routing** — Assist calls use a dedicated VM or scoped upstream model with low temperature; tool use limited to documented operator APIs (no arbitrary shell).
+- **Tooling boundary** — Model-assist does **not** use the developer MCP suite in [`plans/gateway-mcp-tool-backends.md`](plans/gateway-mcp-tool-backends.md). Operator API tools are defined in [`plans/operator-model-assist-tools.md`](plans/operator-model-assist-tools.md).
 - **Auth** — Same UI session as the operator; model cannot escalate privilege.
 - **Audit** — Log `operator.model_assist.proposed` and `operator.model_assist.applied` with page id and API slugs.
 
@@ -151,7 +154,7 @@ Each guide should include, at minimum:
 
 - Routing fallback skip lines (unavailable, quota, context, upstream HTTP errors).
 - `broker.provider.health.fail`, `broker.provider.model_discovery.fail`.
-- Virtual model `fallback_unavailable` hints from VM detail API.
+- Assistant `fallback_unavailable` hints from VM detail API.
 - RAG/indexer errors tied to embedding model or collection health.
 
 ### Alert object (conceptual)
@@ -213,13 +216,14 @@ Each guide should include, at minimum:
 | Optional probe               | Manual probe updates per-model status; not required for wizard continue                                          |
 | Indexer embedding + purge    | [`plans/archive/indexer-embedding-model-and-workspace-purge.md`](plans/archive/indexer-embedding-model-and-workspace-purge.md) acceptance met |
 | Workspace search             | [`plans/operator-workspace-search.md`](plans/operator-workspace-search.md) acceptance met                        |
-| Settings cleanup             | [`plans/archive/embedui-settings-card-cleanup.md`](plans/archive/embedui-settings-card-cleanup.md) phases shipped               |
+| Settings cleanup             | [`plans/embedui-settings-card-cleanup.md`](plans/archive/embedui-settings-card-cleanup.md) phases shipped               |
+| Gateway MCP (harness)        | [`plans/gateway-mcp-tool-backends.md`](plans/gateway-mcp-tool-backends.md) Phases 1–2b (stdio MCP + harness tool loop + blessed `fake_echo` via YAML; [`mcp-sidecar-catalog.md`](reference/mcp-sidecar-catalog.md)); Phase 2c operator settings still open |
 
 ***
 
 ## See also
 
-- [`version-v0.4.md`](version-v0.4.md) — previous version (ensemble, RAG scope, purge theme, in-app settings)
+- [`version-v0.4.md`](version-v0.4.md) — previous version (assistant turn harness)
 - [`version-v0.3.md`](version-v0.3.md) — setup wizard; light-touch provider validation
 - [`chimera.plan.md`](chimera.plan.md) — product roadmap and requirements
 - [`configuration.md`](configuration.md) — configuration reference

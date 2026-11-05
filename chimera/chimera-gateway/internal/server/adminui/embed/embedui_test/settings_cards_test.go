@@ -218,24 +218,24 @@ func TestLogsCards_adminProvider_keyChipReflectsState(t *testing.T) {
 	}
 }
 
-func TestLogsCards_virtualModelCard_fallbackUnavailableBadge(t *testing.T) {
+func TestLogsCards_assistantCard_fallbackUnavailableBadge(t *testing.T) {
 	vm := goja.New()
 	loadCardTestCtx(t, vm)
 
 	_, err := vm.RunString(`
-		ctx.virtualModelDetails = {
+		ctx.assistantDetails = {
 			"42": {
 				fallback_chain: ["groq/free", "groq/paid"],
 				fallback_unavailable: ["groq/paid"]
 			}
 		};
-		ctx.virtualModelUi = { "42": { panelOpen: true, hydrated: true } };
+		ctx.assistantUi = { "42": { panelOpen: true, hydrated: true } };
 	`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	v, err := vm.RunString(`ctx.buildVirtualModelCardHtml({
+	v, err := vm.RunString(`ctx.buildAssistantCardHtml({
 			id: 42,
 			model_id: "Chimera-0.2.0",
 			name: "Chimera",
@@ -259,12 +259,12 @@ func TestLogsCards_virtualModelCard_fallbackUnavailableBadge(t *testing.T) {
 	}
 }
 
-func TestLogsCards_virtualModelCard_detailsLayout(t *testing.T) {
+func TestLogsCards_assistantCard_detailsLayout(t *testing.T) {
 	vm := goja.New()
 	loadCardTestCtx(t, vm)
 
 	v, err := vm.RunString(`
-		ctx.buildVirtualModelCardHtml({
+		ctx.buildAssistantCardHtml({
 			id: 42,
 			model_id: "Chimera-0.2.0",
 			name: "Chimera",
@@ -283,48 +283,51 @@ func TestLogsCards_virtualModelCard_detailsLayout(t *testing.T) {
 	}
 	html := v.String()
 	for _, want := range []string{
-		`<details class="sum-card sum-card--virtual-model"`,
-		`id="virtual-model-42"`,
-		`data-virtual-model-id="42"`,
-		`<summary data-ui-part="virtual-model.summary">`,
-		`sum-avatar sum-av-svc-chimera-gateway">Vm</span>`,
+		`<details class="sum-card sum-card--assistant"`,
+		`id="assistant-42"`,
+		`data-assistant-id="42"`,
+		`<summary data-ui-part="assistant.summary">`,
+		`sum-avatar sum-av-svc-chimera-gateway">As</span>`,
 		`Chimera · 0.2.0`,
 		`Bootstrap`,
 		`>public</span>`,
 		`Chimera-0.2.0`,
 		`sg-op-health-pill`,
-		`sum-body--virtual-model`,
-		`sum-vm-section--bar`,
-		`sum-vm-section__hdr--bar`,
-		`sum-vm-card-toggles`,
+		`sum-body--assistant`,
+		`sum-asst-section--bar`,
+		`sum-asst-section__hdr--bar`,
+		`sum-asst-card-toggles`,
 		`vm-identity-configure`,
 		`vm-identity-visibility-toggle`,
 		`vm-identity-enabled-toggle`,
 		`vm-routing-enabled-toggle`,
 		`vm-router-enabled-toggle`,
-		`sum-vm-section__hdr-toggles`,
-		`sum-vm-section__hdr-trail`,
-		`sum-vm-section__hdr-desc`,
+		`sum-asst-section__hdr-toggles`,
+		`sum-asst-section__hdr-trail`,
+		`sum-asst-section__hdr-desc`,
 		`Required. Ordered upstream model ids`,
 		`vm-42-identity-view`,
 		`vm-42-visibility-toggle`,
 		`sg-op-kv--vm-identity`,
-		`sum-vm-section`,
+		`sum-asst-section`,
 		`Identity`,
 		`Fallback chain`,
 		`Routing policy`,
-		`sum-vm-routing-panel`,
+		`sum-asst-routing-panel`,
 		`vm-42-routing-table`,
 		`vm-42-routing-yaml`,
 		`Tool router`,
+		`data-ui-part="assistant.harness"`,
+		`data-vm-section="harness"`,
+		`Harness`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("missing %q in %q", want, html)
 		}
 	}
-	for _, sumInner := range regexp.MustCompile(`<summary class="sum-vm-section__hdr">([\s\S]*?)</summary>`).FindAllStringSubmatch(html, -1) {
+	for _, sumInner := range regexp.MustCompile(`<summary class="sum-asst-section__hdr">([\s\S]*?)</summary>`).FindAllStringSubmatch(html, -1) {
 		if strings.Contains(sumInner[1], "<button") && !strings.Contains(sumInner[1], `data-sum-card-no-toggle`) {
-			t.Fatalf("virtual model section summary must not contain buttons outside hdr-trail, got %q", sumInner[1])
+			t.Fatalf("assistant section summary must not contain buttons outside hdr-trail, got %q", sumInner[1])
 		}
 	}
 	for _, absent := range []string{
@@ -341,7 +344,7 @@ func TestLogsCards_virtualModelCard_detailsLayout(t *testing.T) {
 		`chat completion url with your API key`,
 		`vm-chat-url-copy`,
 		`vm-chat-body-copy`,
-		`sum-vm-client-usage-panel`,
+		`sum-asst-client-usage-panel`,
 		`/v1/chat/completions`,
 		`vm-identity-delete`,
 		`vm-identity-btn-delete`,
@@ -676,6 +679,76 @@ func TestLogsCards_indexerCardTitleSortLabel(t *testing.T) {
 	}
 }
 
+func TestLogsCards_assistantHarnessMcpPanel(t *testing.T) {
+	vm := goja.New()
+	loadCardTestCtx(t, vm)
+
+	_, err := vm.RunString(`
+		ctx.adminStateCache = ctx.adminStateCache || {};
+		ctx.adminStateCache.mcp = { servers: [], bindingsByVm: {}, toolsByServer: {} };
+		ctx.assistantUi = { "9": { panelOpen: true, hydrated: true } };
+		ctx.assistantDetails = {
+			"9": {
+				fallback_chain: ["groq/free"],
+				routing_policy: "rules: []\n",
+				router_models: [],
+				harness_modules: [
+					{ module_id: "tool_executor", enabled: true, configurable: true, config_json: { mcp: { enabled: true } } }
+				]
+			}
+		};
+		var emptyHtml = ctx.buildAssistantCardHtml({
+			id: 9,
+			model_id: "dev/model",
+			name: "Dev",
+			version: "1",
+			enabled: true,
+			visibility: "public",
+			fallback_depth: 1,
+			routing_policy_enabled: false,
+			tool_router_enabled: false
+		});
+		if (emptyHtml.indexOf('data-ui-part="assistant.harness.mcp-config"') < 0) {
+			throw new Error("missing mcp-config part");
+		}
+		if (emptyHtml.indexOf("PUT /api/ui/mcp/servers") < 0) {
+			throw new Error("expected empty-store operator hint");
+		}
+
+		ctx.adminStateCache.mcp = {
+			servers: [{ server_id: "fake_echo", transport: "stdio", state: "error", error: "spawn failed" }],
+			bindingsByVm: { "9": [{ server_id: "fake_echo", enabled: false, tools: [{ tool_name: "echo", enabled: true }] }] },
+			toolsByServer: { fake_echo: ["echo", "shell_run"] }
+		};
+		var boundHtml = ctx.buildAssistantCardHtml({
+			id: 9,
+			model_id: "dev/model",
+			name: "Dev",
+			version: "1",
+			enabled: true,
+			visibility: "public",
+			fallback_depth: 1,
+			routing_policy_enabled: false,
+			tool_router_enabled: false
+		});
+		if (boundHtml.indexOf("vm-mcp-bindings-save") < 0) {
+			throw new Error("missing save bindings action");
+		}
+		if (boundHtml.indexOf("data-mcp-tool=") < 0 || boundHtml.indexOf('data-mcp-tool="echo"') < 0) {
+			throw new Error("expected per-tool toggles");
+		}
+		if (!/data-mcp-tool="echo"[^>]*\sdisabled/.test(boundHtml)) {
+			throw new Error("tool toggles must disable when server bind is off");
+		}
+		if (boundHtml.indexOf("spawn failed") < 0) {
+			throw new Error("expected error health copy when server state is error");
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLogsCards_cardUiPartAttributes(t *testing.T) {
 	vm := goja.New()
 	loadCardTestCtx(t, vm)
@@ -702,15 +775,19 @@ func TestLogsCards_cardUiPartAttributes(t *testing.T) {
 				throw new Error("provider card missing " + parts[i]);
 			}
 		}
-		ctx.virtualModelUi = { "7": { panelOpen: true, hydrated: true } };
-		ctx.virtualModelDetails = {
+		ctx.assistantUi = { "7": { panelOpen: true, hydrated: true } };
+		ctx.assistantDetails = {
 			"7": {
 				fallback_chain: ["groq/free"],
 				routing_policy: "ambiguous_default_model: groq/free\nrules: []\n",
-				router_models: []
+				router_models: [],
+				harness_modules: [
+					{ module_id: "retrieval", enabled: true, configurable: true, config_json: {} },
+					{ module_id: "tool_executor", enabled: false, configurable: false, disabled_reason: "not yet", config_json: {} }
+				]
 			}
 		};
-		var vmHtml = ctx.buildVirtualModelCardHtml({
+		var vmHtml = ctx.buildAssistantCardHtml({
 			id: 7,
 			model_id: "test/model",
 			name: "Test",
@@ -721,8 +798,11 @@ func TestLogsCards_cardUiPartAttributes(t *testing.T) {
 			routing_policy_enabled: true,
 			tool_router_enabled: false
 		});
-		if (vmHtml.indexOf('data-ui-part="virtual-model.routing"') < 0) {
-			throw new Error("virtual model missing routing part");
+		if (vmHtml.indexOf('data-ui-part="assistant.routing"') < 0) {
+			throw new Error("assistant missing routing part");
+		}
+		if (vmHtml.indexOf('data-ui-part="assistant.harness"') < 0) {
+			throw new Error("assistant missing harness part");
 		}
 	`)
 	if err != nil {

@@ -26,11 +26,12 @@ type TurnContext struct {
 
 // Recorder persists operator chat turns to SQLite (best-effort).
 type Recorder struct {
-	store   *operatorstore.Store
-	log     *slog.Logger
-	ctx     context.Context
-	turn    TurnContext
-	ragHits []vectorstore.Hit
+	store          *operatorstore.Store
+	log            *slog.Logger
+	ctx            context.Context
+	turn           TurnContext
+	ragHits        []vectorstore.Hit
+	harnessSummary []byte
 }
 
 // NewRecorder returns a recorder when store is non-nil.
@@ -41,12 +42,24 @@ func NewRecorder(store *operatorstore.Store, log *slog.Logger, ctx context.Conte
 	return &Recorder{store: store, log: log, ctx: ctx, turn: turn}
 }
 
-// SetRAGHits attaches retrieval hits for the current exchange (virtual-model path).
+// SetRAGHits attaches retrieval hits for the current exchange (assistant path).
 func (r *Recorder) SetRAGHits(hits []vectorstore.Hit) {
 	if r == nil {
 		return
 	}
 	r.ragHits = hits
+}
+
+// SetHarnessSummary attaches a redacted harness envelope JSON blob for the current exchange.
+func (r *Recorder) SetHarnessSummary(summary []byte) {
+	if r == nil {
+		return
+	}
+	if len(summary) == 0 {
+		r.harnessSummary = nil
+		return
+	}
+	r.harnessSummary = append([]byte(nil), summary...)
 }
 
 // Attach wires persistence hooks into chat.ProxyOpts.
@@ -133,13 +146,14 @@ func (r *Recorder) persistSuccess(resolvedModel, assistantContent string, body [
 		promptPtr, completionPtr, totalPtr = &pt, &ct, &tot
 	}
 	turnID, err := r.store.AppendTurn(r.ctx, r.turn.PrincipalID, r.turn.ConversationID, operatorstore.AppendTurnInput{
-		Role:             "assistant",
-		Content:          assistantContent,
-		SelectedModel:    r.turn.SelectedModel,
-		ResolvedModel:    resolvedModel,
-		PromptTokens:     promptPtr,
-		CompletionTokens: completionPtr,
-		TotalTokens:      totalPtr,
+		Role:               "assistant",
+		Content:            assistantContent,
+		SelectedModel:      r.turn.SelectedModel,
+		ResolvedModel:      resolvedModel,
+		PromptTokens:       promptPtr,
+		CompletionTokens:   completionPtr,
+		TotalTokens:        totalPtr,
+		HarnessSummaryJSON: string(r.harnessSummary),
 	})
 	if err != nil {
 		r.warn("append assistant turn", err)
@@ -174,11 +188,12 @@ func (r *Recorder) persistFailure(message, errType string) {
 		detail = message
 	}
 	if _, err := r.store.AppendTurn(r.ctx, r.turn.PrincipalID, r.turn.ConversationID, operatorstore.AppendTurnInput{
-		Role:          "error",
-		Content:       message,
-		ErrorDetail:   detail,
-		RetryUserText: r.turn.UserText,
-		SelectedModel: r.turn.SelectedModel,
+		Role:               "error",
+		Content:            message,
+		ErrorDetail:        detail,
+		RetryUserText:      r.turn.UserText,
+		SelectedModel:      r.turn.SelectedModel,
+		HarnessSummaryJSON: string(r.harnessSummary),
 	}); err != nil {
 		r.warn("append error turn", err)
 	}

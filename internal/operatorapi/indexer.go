@@ -28,9 +28,13 @@ type IndexerWorkspacesResponse struct {
 
 // IndexerWorkspaceCreateRequest is POST /api/ui/indexer/workspaces body.
 type IndexerWorkspaceCreateRequest struct {
-	ProjectID string   `json:"project_id"`
-	FlavorID  string   `json:"flavor_id"`
-	Paths     []string `json:"paths"`
+	ProjectID             string   `json:"project_id"`
+	FlavorID              string   `json:"flavor_id"`
+	Paths                 []string `json:"paths"`
+	Sensitivity           string   `json:"sensitivity"`
+	AllowCloud            bool     `json:"allow_cloud"`
+	AllowCloudSummaryOnly bool     `json:"allow_cloud_summary_only"`
+	FileActionPolicy      string   `json:"file_action_policy"`
 }
 
 // IndexerWorkspaceCreateResponse is POST /api/ui/indexer/workspaces success JSON.
@@ -42,14 +46,19 @@ type IndexerWorkspaceCreateResponse struct {
 
 // IndexerWorkspaceUpdateRequest is PUT /api/ui/indexer/workspaces/{id} body.
 type IndexerWorkspaceUpdateRequest struct {
-	ProjectID string `json:"project_id"`
-	FlavorID  string `json:"flavor_id"`
+	ProjectID             string `json:"project_id"`
+	FlavorID              string `json:"flavor_id"`
+	Sensitivity           string `json:"sensitivity"`
+	AllowCloud            bool   `json:"allow_cloud"`
+	AllowCloudSummaryOnly bool   `json:"allow_cloud_summary_only"`
+	FileActionPolicy      string `json:"file_action_policy"`
 }
 
 // IndexerWorkspaceUpdateResponse is PUT /api/ui/indexer/workspaces/{id} success JSON.
 type IndexerWorkspaceUpdateResponse struct {
-	OK    bool             `json:"ok"`
-	Roots []map[string]any `json:"roots"`
+	OK        bool             `json:"ok"`
+	Workspace map[string]any   `json:"workspace"`
+	Roots     []map[string]any `json:"roots"`
 }
 
 // IndexerRootsResponse is shared by several workspace/path mutations.

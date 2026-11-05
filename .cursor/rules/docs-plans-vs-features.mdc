@@ -48,6 +48,6 @@ alwaysApply: true
 
 1. Read [gateway-chat-routing-pipeline.md](../../docs/features/gateway-chat-routing-pipeline.md) for stage order and invariants.
 2. Prefer extending an existing stage package (`transform`, `rag`, `routing`, `providerlimits`, `chat`) before new orchestration in handlers.
-3. Wire config through virtual model stack where operator-visible; document new fields in [operator-virtual-models.md](../../docs/features/operator-virtual-models.md) if settings change.
+3. Wire config through assistant stack where operator-visible; document new fields in [operator-assistants.md](../../docs/features/operator-assistants.md) if settings change.
 4. Add stable log slugs to [operator message registry](../../docs/features/operator-log-message-registry.md).
-5. Do not call upstream outside `chat.WithVirtualModelFallback` unless explicitly designing a new stage type documented in the pipeline feature.
+5. Do not call upstream outside `chat.WithAssistantFallback` unless explicitly designing a new stage type documented in the pipeline feature.

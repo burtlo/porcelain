@@ -120,7 +120,7 @@ globalThis.ChimeraSettings.Render.mountSumEvlog = function (ctx) {
       msgL === "upstream chat response" ||
       msgL === "chat.routing.fallback" ||
       msgL === "chat.routing.resolved" ||
-      msgL === "virtual model routing resolved"
+      msgL === "assistant routing resolved"
     ) {
       var c = sumEvlogHttpStatusNumber(
         flat.statusCode != null ? flat.statusCode : flat.status_code != null ? flat.status_code : flat.status

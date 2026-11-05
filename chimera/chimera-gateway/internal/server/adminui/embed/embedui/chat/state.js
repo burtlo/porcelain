@@ -24,6 +24,10 @@
       selectedModel: extra.selectedModel || "",
       upstreamModel: extra.upstreamModel || "",
       ragHits: extra.ragHits || null,
+      harnessSummary: extra.harnessSummary || null,
+      requestId: extra.requestId || "",
+      turnIndex: extra.turnIndex != null ? extra.turnIndex : null,
+      conversationId: extra.conversationId || "",
       error: extra.error || "",
       retryUserText: extra.retryUserText || ""
     };

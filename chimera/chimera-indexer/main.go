@@ -126,7 +126,7 @@ func runOneShot(parentCtx context.Context, cfg indexer.Resolved, logJSON bool, b
 	if _, err := ix.FetchAndLogConfig(parentCtx); err != nil {
 		var he *indexer.HTTPError
 		if errors.As(err, &he) && he.Status == 503 && strings.Contains(strings.ToLower(he.Body), "rag is not enabled") {
-			return fmt.Errorf("gateway at %s has RAG disabled — set rag.enabled=true in config/gateway.yaml and restart the gateway", cfg.GatewayURL)
+			return fmt.Errorf("gateway at %s has RAG disabled — set search.enabled=true in config/chimera.yaml and restart the gateway", cfg.GatewayURL)
 		}
 		log.Warn("continuing despite config fetch failure", "err", err)
 	}
@@ -220,7 +220,7 @@ func runSupervisedLongSession(
 	if _, err := ix.FetchAndLogConfig(sessionCtx); err != nil {
 		var he *indexer.HTTPError
 		if errors.As(err, &he) && he.Status == 503 && strings.Contains(strings.ToLower(he.Body), "rag is not enabled") {
-			return fmt.Errorf("gateway at %s has RAG disabled — set rag.enabled=true in config/gateway.yaml and restart the gateway", cfg.GatewayURL)
+			return fmt.Errorf("gateway at %s has RAG disabled — set search.enabled=true in config/chimera.yaml and restart the gateway", cfg.GatewayURL)
 		}
 		log.Warn("continuing despite config fetch failure", "err", err)
 	}

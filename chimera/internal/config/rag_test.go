@@ -10,32 +10,34 @@ import (
 func TestRAG_Defaults_WhenDisabled(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "gateway.yaml")
-	raw := `gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+	gw := filepath.Join(dir, "chimera.yaml")
+	raw := `gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 `
 	if err := os.WriteFile(gw, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.RAG.Enabled {
-		t.Fatal("RAG should default disabled when block missing")
+		t.Fatal("search should default disabled when block missing")
 	}
 }
 
 func TestRAG_EnabledFillsDefaults(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "gateway.yaml")
+	gw := filepath.Join(dir, "chimera.yaml")
 	raw := `
-gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 vectorstore:
   url: "http://127.0.0.1:6333"
-rag:
+search:
   enabled: true
   embedding:
     model: "text-embedding-3-small"
@@ -44,13 +46,13 @@ rag:
 	if err := os.WriteFile(gw, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := res.RAG
 	if !r.Enabled {
-		t.Fatal("expected RAG enabled")
+		t.Fatal("expected search enabled")
 	}
 	if r.ChunkSize != 512 || r.ChunkOverlap != 128 {
 		t.Fatalf("chunk defaults: size=%d overlap=%d", r.ChunkSize, r.ChunkOverlap)
@@ -72,13 +74,14 @@ rag:
 func TestRAG_InvalidConfigDisables(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "gateway.yaml")
+	gw := filepath.Join(dir, "chimera.yaml")
 	raw := `
-gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 vectorstore:
   url: "ftp://nope"
-rag:
+search:
   enabled: true
   embedding:
     model: "x"
@@ -87,12 +90,12 @@ rag:
 	if err := os.WriteFile(gw, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.RAG.Enabled {
-		t.Fatal("invalid qdrant scheme should disable RAG")
+		t.Fatal("invalid qdrant scheme should disable search")
 	}
 }
 

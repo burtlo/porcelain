@@ -130,13 +130,11 @@ func TestAuditConfiguredFallbackAvailability_skipsWhenAllAvailable(t *testing.T)
 func testRuntimeWithProviderAvailability(t *testing.T) *Runtime {
 	t.Helper()
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, "gateway.yaml")
+	gwPath := filepath.Join(dir, "chimera.yaml")
 	opMig := testsupport.GatewayOperatorMigrationsDir(t)
 	opMigSlash := strings.ReplaceAll(filepath.ToSlash(opMig), `\`, `/`)
 	raw := "gateway:\n  semver: \"0.1.0\"\n  listen_port: 0\n  listen_host: \"127.0.0.1\"\n" +
-		"broker:\n  base_url: \"http://127.0.0.1:9\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n" +
-		"health:\n  timeout_ms: 2000\n  chat_timeout_ms: 60000\n" +
-		"paths:\n  tokens: \"./api-keys.yaml\"\n" +
+		"broker:\n  url: \"http://127.0.0.1:9\"\n  api_key_env: \"CHIMERA_BROKER_API_KEY\"\n" +
 		"operator:\n  sqlite_path: \"./operator.sqlite\"\n  migrations_dir: \"" + opMigSlash + "\"\n"
 	if err := os.WriteFile(gwPath, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
@@ -166,10 +164,10 @@ func seedTestVMFallbackChain(t *testing.T, rt *Runtime, chain []string) {
 	}
 	ctx := context.Background()
 	vm := operatorstore.ChimeraSeed("0.1.0", chain, chain[0])
-	if _, err := st.InsertVirtualModelFull(ctx, vm); err != nil {
+	if _, err := st.InsertAssistantFull(ctx, vm); err != nil {
 		t.Fatal(err)
 	}
-	if err := rt.ReloadVirtualModels(ctx); err != nil {
+	if err := rt.ReloadAssistants(ctx); err != nil {
 		t.Fatal(err)
 	}
 }

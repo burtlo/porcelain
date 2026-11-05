@@ -6,7 +6,7 @@
 | **Areas** | Gateway RAG service, vector store, embedding client, chat path, indexer ingest APIs |
 | **Status** | `current` |
 | **Introduced** | Gateway v0.2 RAG baseline |
-| **Originated from** | [`plans/archive/indexer.md`](../plans/archive/indexer.md), gateway RAG design in [`docs/indexer.md`](../indexer.md) |
+| **Originated from** | [`plans/indexer.md`](../plans/archive/indexer.md), gateway RAG design in [`docs/indexer.md`](../indexer.md) |
 | **Related features** | [Workspace file indexer](indexer.md), [Indexer ingest pipeline](indexer-ingest-pipeline.md), [Operator chat UI](operator-chat-ui.md), [Context window admission](context-window-admission.md), [Gateway chat routing pipeline](gateway-chat-routing-pipeline.md) |
 | **Depends on** | `rag.enabled` in gateway config, vector store, broker embedding catalog or internal embedding provider |
 | **Last updated** | See git history |
@@ -40,7 +40,7 @@ When `rag.enabled` is true, the gateway runs a shared **RAG service** that chunk
 | Whole vs session ingest | Below `max_whole_file_bytes` → `POST /v1/ingest`; above → session API with ordered chunks |
 | Default chunking | 512 chars / 128 overlap when unset |
 | Default top_k | 8 at retrieve unless overridden |
-| Per-VM RAG | Not scoped per virtual model in v1 — gateway-global when enabled |
+| Per-assistant retrieval | Global `rag.enabled` gates the service; per-assistant **retrieval** harness module overrides top_k, floors, compression, and skip rules ([operator assistants](operator-assistants.md)) |
 
 ## Interfaces
 
@@ -53,8 +53,8 @@ When `rag.enabled` is true, the gateway runs a shared **RAG service** that chunk
 | `GET /v1/indexer/storage/stats` | Collection stats per scope |
 | `GET /v1/indexer/corpus/inventory` | Skip detection for indexer |
 | `POST /v1/chat/completions` | Retrieves when RAG enabled + scope present |
-| Headers | `X-Chimera-Project`, `X-Chimera-Flavor-Id`; response `X-Chimera-RAG-Hits` (base64 JSON) |
-| Config | `gateway.yaml` → `rag.enabled`, `rag.embedding.*`, optional `internal_embedding.*`, thresholds, size limits |
+| Headers | `X-Chimera-Project`, `X-Chimera-Flavor-Id`; response `X-Chimera-RAG-Hits` (base64 JSON). Chat wire contract: [`configuration.md`](../configuration.md#chat-completions-client-contract) |
+| Config | `gateway.yaml` → `rag.enabled`, `rag.qdrant.*`, thresholds, size limits, optional `internal_embedding.*` |
 
 ## Code map
 
@@ -68,7 +68,7 @@ When `rag.enabled` is true, the gateway runs a shared **RAG service** that chunk
 | Vector store | `internal/vectorstore/` |
 | Ingest HTTP handlers | `internal/server/` (ingest routes in `server.go`) |
 | Indexer-facing RAG API | `internal/server/indexerapi/` |
-| Chat retrieval wiring | `internal/server/virtualmodel_chat.go` |
+| Chat retrieval wiring | `internal/harness` retrieval stage + `internal/server/assistant_chat.go` |
 
 ## Verification
 
@@ -90,7 +90,7 @@ Manual: ingest a file via indexer or `POST /v1/ingest`, chat with matching proje
 
 - `X-Chimera-RAG-Hits` and `FormatRetrievedContext` include line ranges; chat UI gutter shipped ([`indexer-manifest-ingest`](../plans/indexer-manifest-ingest.md) Phases 4–5).
 - Indexer `POST /v1/indexer/read-segment` (live file bytes) — deferred; expansion uses Qdrant + segment index only.
-- Per-virtual-model RAG scope — deferred (see [virtual models](operator-virtual-models.md)).
+- Additional retrieval backends (web, manifest-only routers) — future harness stages; per-assistant knobs ship via [operator assistants](operator-assistants.md) retrieval module.
 
 ## References
 

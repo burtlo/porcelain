@@ -84,22 +84,22 @@ func TestLoadEnsureModelsFromOperatorSQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`CREATE TABLE virtual_models (
+	if _, err := db.Exec(`CREATE TABLE assistants (
 		id INTEGER PRIMARY KEY, model_id TEXT NOT NULL, name TEXT NOT NULL, version TEXT NOT NULL,
 		description TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
 		visibility TEXT NOT NULL DEFAULT 'public', created_by_principal_id TEXT NOT NULL DEFAULT '',
 		tenant_id TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-	); CREATE TABLE virtual_model_fallback (
-		virtual_model_id INTEGER PRIMARY KEY, chain_json TEXT NOT NULL, updated_at TEXT NOT NULL
+	); CREATE TABLE assistant_fallback (
+		assistant_id INTEGER PRIMARY KEY, chain_json TEXT NOT NULL, updated_at TEXT NOT NULL
 	);`); err != nil {
 		t.Fatal(err)
 	}
 	chain, _ := json.Marshal([]string{"groq/fast", "groq/slow"})
-	if _, err := db.Exec(`INSERT INTO virtual_models(id, model_id, name, version, enabled, created_at, updated_at)
+	if _, err := db.Exec(`INSERT INTO assistants(id, model_id, name, version, enabled, created_at, updated_at)
 		VALUES (1, 'Test-1.0.0', 'Test', '1.0.0', 1, 'now', 'now')`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO virtual_model_fallback(virtual_model_id, chain_json, updated_at)
+	if _, err := db.Exec(`INSERT INTO assistant_fallback(assistant_id, chain_json, updated_at)
 		VALUES (1, ?, 'now')`, string(chain)); err != nil {
 		t.Fatal(err)
 	}

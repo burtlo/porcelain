@@ -25,25 +25,25 @@ func TestReplaceFile(t *testing.T) {
 	}
 }
 
-func TestCommitRoutingAndGateway_rollbackGateway(t *testing.T) {
+func TestCommitRoutingAndChimera_rollbackChimera(t *testing.T) {
 	dir := t.TempDir()
 	routePath := filepath.Join(dir, "routing-policy.yaml")
-	gwPath := filepath.Join(dir, "gateway.yaml")
+	chimeraPath := filepath.Join(dir, "chimera.yaml")
 	if err := os.WriteFile(routePath, []byte("route-v1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(gwPath, []byte("gw-v1"), 0o644); err != nil {
+	if err := os.WriteFile(chimeraPath, []byte("gw-v1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(gwPath); err != nil {
+	if err := os.Remove(chimeraPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(gwPath, 0o755); err != nil {
+	if err := os.Mkdir(chimeraPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	err := CommitRoutingAndGateway(routePath, []byte("route-v2"), 0o644, gwPath, []byte("gw-v2"), 0o644)
+	err := CommitRoutingAndChimera(routePath, []byte("route-v2"), 0o644, chimeraPath, []byte("gw-v2"), 0o644)
 	if err == nil {
-		t.Fatal("expected error when gateway path is not a writable file")
+		t.Fatal("expected error when chimera path is not a writable file")
 	}
 	rb, _ := os.ReadFile(routePath)
 	if string(rb) != "route-v1" {
@@ -51,16 +51,16 @@ func TestCommitRoutingAndGateway_rollbackGateway(t *testing.T) {
 	}
 }
 
-func TestCommitRoutingAndGateway_success(t *testing.T) {
+func TestCommitRoutingAndChimera_success(t *testing.T) {
 	dir := t.TempDir()
 	routePath := filepath.Join(dir, "routing-policy.yaml")
-	gwPath := filepath.Join(dir, "gateway.yaml")
-	err := CommitRoutingAndGateway(routePath, []byte("r2"), 0o644, gwPath, []byte("g2"), 0o644)
+	chimeraPath := filepath.Join(dir, "chimera.yaml")
+	err := CommitRoutingAndChimera(routePath, []byte("r2"), 0o644, chimeraPath, []byte("g2"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rb, _ := os.ReadFile(routePath)
-	gb, _ := os.ReadFile(gwPath)
+	gb, _ := os.ReadFile(chimeraPath)
 	if string(rb) != "r2" || string(gb) != "g2" {
 		t.Fatalf("r=%q g=%q", rb, gb)
 	}

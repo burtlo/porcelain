@@ -21,7 +21,7 @@ func main() {
 	limitsPath := flag.String("limits", defaultLimits, "provider-model-limits.yaml to patch in place")
 	ensureFlag := flag.String("ensure", "", "comma-separated upstream model ids to ensure exist in limits (may repeat)")
 	ensureFromCatalog := flag.Bool("ensure-from-catalog", false, "ensure every model id listed in the catalog snapshot")
-	operatorSQLite := flag.String("operator-sqlite", "", "optional operator SQLite path; ensure models from enabled virtual model fallback chains")
+	operatorSQLite := flag.String("operator-sqlite", "", "optional operator SQLite path; ensure models from enabled assistant fallback chains")
 	force := flag.Bool("force", false, "overwrite existing context_window values")
 	flag.Parse()
 

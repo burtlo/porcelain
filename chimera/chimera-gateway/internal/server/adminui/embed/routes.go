@@ -32,7 +32,10 @@ func Register(mux *http.ServeMux, h *handler.Handler) {
 	// Shared primitives (login/setup) — no session required; static CSS/JS only.
 	mux.HandleFunc("GET /ui/assets/ui.css", ServeAsset("embedui/ui.css", "text/css; charset=utf-8"))
 	mux.HandleFunc("GET /ui/assets/theme-tokens.css", ServeAsset("embedui/theme-tokens.css", "text/css; charset=utf-8"))
+	mux.HandleFunc("GET /ui/assets/fonts.css", ServeAsset("embedui/fonts.css", "text/css; charset=utf-8"))
 	mux.HandleFunc("GET /ui/assets/embed-theme.js", ServeAsset("embedui/embed-theme.js", "application/javascript; charset=utf-8"))
+	// Local font files (woff2) — public so login/setup paint without a session.
+	mux.HandleFunc("GET /ui/assets/fonts/", ServeFontPrefix("embedui/fonts/", "/ui/assets/fonts/"))
 
 	mux.HandleFunc("GET /ui/assets/settings.css", h.RequireAuthPage(ServeAsset("embedui/settings.css", "text/css; charset=utf-8")))
 	mux.HandleFunc("GET /ui/assets/styles/", h.RequireAuthPage(ServePathPrefix("embedui/styles/", "/ui/assets/styles/", "text/css; charset=utf-8")))

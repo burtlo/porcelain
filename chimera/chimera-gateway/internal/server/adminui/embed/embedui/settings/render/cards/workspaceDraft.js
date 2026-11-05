@@ -143,6 +143,10 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
     var paths = d.paths && d.paths.length ? d.paths : [];
     var prVal = escapeHtml(String(d.projectId != null ? d.projectId : ""));
     var fvVal = escapeHtml(String(d.flavorId != null ? d.flavorId : ""));
+    var sensitivity = String(d.sensitivity || "internal");
+    var fileActionPolicy = String(d.fileActionPolicy || "none");
+    var allowCloud = d.allowCloud !== false;
+    var allowCloudSummaryOnly = d.allowCloudSummaryOnly === true;
     var pathsRow = pathsEditorHtml(paths, {
       selectAttr: 'data-ws-draft-paths="' + String(d.id) + '"',
       removeDisabled: !paths.length
@@ -192,11 +196,36 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
       '" />' +
       "</div>" +
       "</div>" +
+      buildWorkspacePolicyControlsHtml(uid, sensitivity, allowCloud, allowCloudSummaryOnly, fileActionPolicy, "workspace-draft.policy") +
       '<div class="sum-section-label">Watched paths</div>' +
       pathsRow +
       hint +
       "</div>" +
       "</article>"
+    );
+  }
+
+  function buildWorkspacePolicyControlsHtml(idPrefix, sensitivity, allowCloud, allowCloudSummaryOnly, fileActionPolicy, partSlug) {
+    function selected(value, expected) {
+      return value === expected ? " selected" : "";
+    }
+    return (
+      '<fieldset class="ws-policy-fields" data-ui-part="' + escapeHtml(partSlug) + '">' +
+      '<legend class="sum-section-label">Workspace policy</legend>' +
+      '<label class="ws-draft-field-label" for="' + escapeHtml(idPrefix) + '-sensitivity">Sensitivity</label>' +
+      '<select id="' + escapeHtml(idPrefix) + '-sensitivity" class="ws-draft-input" data-ws-policy="sensitivity">' +
+      '<option value="public"' + selected(sensitivity, "public") + '>Public</option>' +
+      '<option value="internal"' + selected(sensitivity, "internal") + '>Internal</option>' +
+      '<option value="private"' + selected(sensitivity, "private") + '>Private</option>' +
+      '</select>' +
+      '<label class="ws-policy-toggle"><input type="checkbox" data-ws-policy="allow_cloud"' + (allowCloud ? " checked" : "") + '> Allow cloud models</label>' +
+      '<label class="ws-policy-toggle"><input type="checkbox" data-ws-policy="allow_cloud_summary_only"' + (allowCloudSummaryOnly ? " checked" : "") + '> Cloud summaries only</label>' +
+      '<label class="ws-draft-field-label" for="' + escapeHtml(idPrefix) + '-file-policy">File actions</label>' +
+      '<select id="' + escapeHtml(idPrefix) + '-file-policy" class="ws-draft-input" data-ws-policy="file_action_policy">' +
+      '<option value="none"' + selected(fileActionPolicy, "none") + '>No file access</option>' +
+      '<option value="read"' + selected(fileActionPolicy, "read") + '>Read files</option>' +
+      '<option value="read_write"' + selected(fileActionPolicy, "read_write") + '>Read and write files</option>' +
+      '</select></fieldset>'
     );
   }
 
@@ -212,6 +241,18 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
       addDisabled: !!ctx.workspaceManagedFolderPickerOpen,
       removeDisabled: !rows.length
     });
+  }
+
+  function buildManagedWorkspacePolicyEditHtml(wsNum, workspace) {
+    workspace = workspace || {};
+    return buildWorkspacePolicyControlsHtml(
+      "ws-managed-" + String(wsNum),
+      String(workspace.sensitivity || "internal"),
+      workspace.allow_cloud !== false,
+      workspace.allow_cloud_summary_only === true,
+      String(workspace.file_action_policy || "none"),
+      "indexer-operator-workspace.policy"
+    );
   }
 
   function buildManagedWorkspaceReindexBtnHtml(wsNum, titleText) {
@@ -300,6 +341,12 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
       notifyWorkspaceDraftMsg("Add at least one watched path.", true);
       return;
     }
+    var card = document.querySelector('[data-workspace-draft="' + String(draftId) + '"]');
+    function policyValue(name, fallback) {
+      var input = card && card.querySelector('[data-ws-policy="' + name + '"]');
+      if (!input) return fallback;
+      return input.type === "checkbox" ? input.checked : String(input.value || fallback);
+    }
     fetch("/api/ui/indexer/workspaces", {
       method: "POST",
       credentials: "same-origin",
@@ -307,7 +354,11 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
       body: JSON.stringify({
         project_id: pj,
         flavor_id: fv,
-        paths: d.paths.slice()
+        paths: d.paths.slice(),
+        sensitivity: policyValue("sensitivity", "internal"),
+        allow_cloud: policyValue("allow_cloud", true),
+        allow_cloud_summary_only: policyValue("allow_cloud_summary_only", false),
+        file_action_policy: policyValue("file_action_policy", "none")
       })
     })
       .then(function (res) {
@@ -428,6 +479,7 @@ globalThis.ChimeraSettings.Render.Cards.mountWorkspaceDraft = function (ctx) {
   ctx.buildWorkspaceDraftCardHtml = buildWorkspaceDraftCardHtml;
   ctx.syncWorkspaceDraftHeader = syncWorkspaceDraftHeader;
   ctx.buildManagedWorkspacePathsEditHtml = buildManagedWorkspacePathsEditHtml;
+  ctx.buildManagedWorkspacePolicyEditHtml = buildManagedWorkspacePolicyEditHtml;
   ctx.buildManagedWorkspaceToolbarHtml = buildManagedWorkspaceToolbarHtml;
   ctx.buildWorkspacesCreateBtnHtml = buildWorkspacesCreateBtnHtml;
   ctx.buildWorkspacesSectionIntroHtml = buildWorkspacesSectionIntroHtml;

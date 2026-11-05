@@ -8,6 +8,13 @@
     return escapeHtml ? escapeHtml(String(s)) : String(s);
   }
 
+  function materialIconChar(escapeHtml, name) {
+    if (globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function") {
+      return ChimeraMaterialIcons.char(name);
+    }
+    return escAttr(escapeHtml, name);
+  }
+
   /**
    * opts: action, title, icon, extraClass, disabled, dataAttrs { key: value }
    */
@@ -36,7 +43,7 @@
       "<button" +
       attrs +
       '><span class="material-symbols-outlined" aria-hidden="true">' +
-      escAttr(escapeHtml, opts.icon || "") +
+      materialIconChar(escapeHtml, opts.icon || "") +
       "</span></button>"
     );
   }

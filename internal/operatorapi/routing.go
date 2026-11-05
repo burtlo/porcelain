@@ -15,7 +15,7 @@ type RoutingPolicySummary struct {
 	Rules                 []RoutingRuleSummary `json:"rules"`
 }
 
-// RoutingGenerateResponse is virtual-model generate success JSON.
+// RoutingGenerateResponse is assistant generate success JSON.
 type RoutingGenerateResponse struct {
 	OK                  bool                 `json:"ok"`
 	Saved               bool                 `json:"saved"`
@@ -36,11 +36,11 @@ type ModelDecision struct {
 	Reason  string `json:"reason"`
 }
 
-// RoutingEvaluateRequest is POST /api/ui/virtual-models/{id}/routing/evaluate body.
+// RoutingEvaluateRequest is POST /api/ui/assistants/{id}/routing/evaluate body.
 type RoutingEvaluateRequest struct {
 	RoutingPolicyYAML string          `json:"routing_policy_yaml"`
 	FallbackChain     []string        `json:"fallback_chain"`
-	VirtualModelID    string          `json:"virtual_model_id"`
+	AssistantID       string          `json:"assistant_id"`
 	Messages          json.RawMessage `json:"messages"`
 	SmokeCompletion   bool            `json:"smoke_completion"`
 }
@@ -53,7 +53,7 @@ type SmokeCompletionResult struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// RoutingEvaluateResponse is POST /api/ui/virtual-models/{id}/routing/evaluate success JSON.
+// RoutingEvaluateResponse is POST /api/ui/assistants/{id}/routing/evaluate success JSON.
 type RoutingEvaluateResponse struct {
 	OK                  bool                   `json:"ok"`
 	InitialModel        string                 `json:"initial_model"`

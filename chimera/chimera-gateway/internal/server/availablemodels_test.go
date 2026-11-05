@@ -48,7 +48,7 @@ func TestBuildCatalogSnapshot_collectsProvidersAndModels(t *testing.T) {
 	if snap == nil || !snap.OK {
 		t.Fatalf("snapshot ok=false: %+v", snap)
 	}
-	if snap.CatalogModelCount != 5 { // 1 virtual + 4 upstream
+	if snap.CatalogModelCount != 5 { // 1 assistant + 4 upstream
 		t.Fatalf("catalog_model_count=%d want 5", snap.CatalogModelCount)
 	}
 	if got := snap.Providers; len(got) != 3 || got[0] != "gemini" || got[1] != "groq" || got[2] != "ollama" {

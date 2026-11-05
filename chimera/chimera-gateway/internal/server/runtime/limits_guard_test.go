@@ -14,7 +14,7 @@ import (
 func TestLimitsGuard_overlaysFreshCatalogContext(t *testing.T) {
 	dir := t.TempDir()
 	limitsPath := filepath.Join(dir, "provider-model-limits.yaml")
-	gatewayPath := filepath.Join(dir, "gateway.yaml")
+	gatewayPath := filepath.Join(dir, "chimera.yaml")
 	if err := os.WriteFile(limitsPath, []byte(`
 schema_version: 2
 defaults:
@@ -28,15 +28,12 @@ providers:
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(gatewayPath, []byte(`
-gateway: { listen_port: 3000 }
-paths:
-  tokens: "./tokens.yaml"
-  routing_policy: "./routing-policy.yaml"
-  provider_model_limits: "./provider-model-limits.yaml"
-routing:
-  fallback_chain: ["groq/live-only"]
-metrics:
-  enabled: false
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./tokens.yaml" }
+  metrics: { enabled: false }
+broker:
+  models: { limits: "./provider-model-limits.yaml" }
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +67,7 @@ metrics:
 func TestLimitsGuard_staleCatalogDoesNotOverlay(t *testing.T) {
 	dir := t.TempDir()
 	limitsPath := filepath.Join(dir, "provider-model-limits.yaml")
-	gatewayPath := filepath.Join(dir, "gateway.yaml")
+	gatewayPath := filepath.Join(dir, "chimera.yaml")
 	if err := os.WriteFile(limitsPath, []byte(`
 schema_version: 2
 defaults:
@@ -84,15 +81,12 @@ providers:
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(gatewayPath, []byte(`
-gateway: { listen_port: 3000 }
-paths:
-  tokens: "./tokens.yaml"
-  routing_policy: "./routing-policy.yaml"
-  provider_model_limits: "./provider-model-limits.yaml"
-routing:
-  fallback_chain: ["groq/stale"]
-metrics:
-  enabled: false
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./tokens.yaml" }
+  metrics: { enabled: false }
+broker:
+  models: { limits: "./provider-model-limits.yaml" }
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +121,7 @@ metrics:
 func TestLimitsGuard_yamlContextBeatsFreshCatalog(t *testing.T) {
 	dir := t.TempDir()
 	limitsPath := filepath.Join(dir, "provider-model-limits.yaml")
-	gatewayPath := filepath.Join(dir, "gateway.yaml")
+	gatewayPath := filepath.Join(dir, "chimera.yaml")
 	if err := os.WriteFile(limitsPath, []byte(`
 schema_version: 2
 defaults:
@@ -141,15 +135,12 @@ providers:
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(gatewayPath, []byte(`
-gateway: { listen_port: 3000 }
-paths:
-  tokens: "./tokens.yaml"
-  routing_policy: "./routing-policy.yaml"
-  provider_model_limits: "./provider-model-limits.yaml"
-routing:
-  fallback_chain: ["groq/x"]
-metrics:
-  enabled: false
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./tokens.yaml" }
+  metrics: { enabled: false }
+broker:
+  models: { limits: "./provider-model-limits.yaml" }
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
