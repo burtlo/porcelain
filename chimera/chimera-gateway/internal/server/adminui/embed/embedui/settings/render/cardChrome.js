@@ -33,11 +33,17 @@ globalThis.ChimeraSettings.Render.Cards.mountCardChrome = function (ctx) {
 
   function sgOpInsetWellOkFailHtml(okN, failN, prefix, opts) {
     opts = opts || {};
+    var iconChar = function (name) {
+      if (globalThis.ChimeraMaterialIcons && typeof ChimeraMaterialIcons.char === "function") {
+        return ChimeraMaterialIcons.char(name);
+      }
+      return escapeHtml(String(name || ""));
+    };
     var lead = "";
     if (opts.leadIcon) {
       lead =
         '<span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">' +
-        escapeHtml(String(opts.leadIcon)) +
+        iconChar(opts.leadIcon) +
         "</span> ";
     } else if (prefix) {
       lead = escapeHtml(String(prefix)) + " ";
@@ -49,11 +55,16 @@ globalThis.ChimeraSettings.Render.Cards.mountCardChrome = function (ctx) {
     var out = '<span class="sg-op-inset-well"' + titleAttr + ">" + lead;
     if (opts.okIcon !== false) {
       out +=
-        '<span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">check_circle</span> ';
+        '<span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">' +
+        iconChar("check_circle") +
+        "</span> ";
     }
     out += escapeHtml(formatInt(okN)) + " " + escapeHtml(formatInt(failN));
     if (opts.errorIcon !== false) {
-      out += ' <span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">error</span>';
+      out +=
+        ' <span class="material-symbols-outlined material-symbols-outlined--sm" aria-hidden="true">' +
+        iconChar("error") +
+        "</span>";
     }
     return out + "</span>";
   }

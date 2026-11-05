@@ -10,21 +10,21 @@ import (
 func TestEnsureGeneratedUpstreamAPIKey_generatesAndPersists(t *testing.T) {
 	t.Setenv("CHIMERA_BROKER_API_KEY", "")
 	dir := t.TempDir()
-	p := filepath.Join(dir, "gateway.yaml")
+	p := filepath.Join(dir, "chimera.yaml")
 	raw := `gateway:
   semver: "0.1.0"
   listen_port: 3000
   listen_host: "127.0.0.1"
+  auth:
+    api_keys: "./api-keys.yaml"
 broker:
-  base_url: "http://127.0.0.1:8080"
+  url: "http://127.0.0.1:8080"
   api_key_env: "CHIMERA_BROKER_API_KEY"
-paths:
-  api_keys: "./api-keys.yaml"
 `
 	if err := os.WriteFile(p, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(p, nil)
+	res, err := LoadChimeraYAML(p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ paths:
 	if strings.TrimSpace(out.UpstreamAPIKey) == "" {
 		t.Fatal("expected generated key")
 	}
-	res2, err := LoadGatewayYAML(p, nil)
+	res2, err := LoadChimeraYAML(p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,19 +54,19 @@ paths:
 func TestEnsureGeneratedUpstreamAPIKey_envSkipsWrite(t *testing.T) {
 	t.Setenv("CHIMERA_BROKER_API_KEY", "from-env")
 	dir := t.TempDir()
-	p := filepath.Join(dir, "gateway.yaml")
+	p := filepath.Join(dir, "chimera.yaml")
 	raw := `gateway:
   semver: "0.1.0"
+  auth:
+    api_keys: "./api-keys.yaml"
 broker:
-  base_url: "http://127.0.0.1:8080"
+  url: "http://127.0.0.1:8080"
   api_key_env: "CHIMERA_BROKER_API_KEY"
-paths:
-  api_keys: "./api-keys.yaml"
 `
 	if err := os.WriteFile(p, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(p, nil)
+	res, err := LoadChimeraYAML(p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,21 +83,21 @@ paths:
 	}
 }
 
-func TestLoadGatewayYAML_upstreamAPIKey(t *testing.T) {
+func TestLoadChimeraYAML_upstreamAPIKey(t *testing.T) {
 	dir := t.TempDir()
-	p := filepath.Join(dir, "gateway.yaml")
+	p := filepath.Join(dir, "chimera.yaml")
 	raw := `gateway:
   semver: "0.1.0"
+  auth:
+    api_keys: "./api-keys.yaml"
 broker:
-  base_url: "http://x"
+  url: "http://x"
   api_key: "yaml-secret"
-paths:
-  api_keys: "./api-keys.yaml"
 `
 	if err := os.WriteFile(p, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(p, nil)
+	res, err := LoadChimeraYAML(p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

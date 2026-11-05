@@ -13,7 +13,7 @@ Treat logs as sensitive metadata (tenants, models, URLs) and protect retention a
 
 ## Network exposure
 
-- **Default shipped config** (`config/gateway.example.yaml`) listens on `0.0.0.0:3000` (`gateway.listen_host` / `listen_port`). Anything that can reach that address can call `/v1/*` with a valid gateway token and can read `/health` without auth. Prefer `127.0.0.1` (or host firewall / reverse proxy + TLS) when the gateway must not be reachable from other machines.
+- **Default shipped config** (`config/chimera.example.yaml`) listens on `0.0.0.0:3000` (`gateway.listen_host` / `listen_port`). Anything that can reach that address can call `/v1/*` with a valid gateway token and can read `/health` without auth. Prefer `127.0.0.1` (or host firewall / reverse proxy + TLS) when the gateway must not be reachable from other machines.
 - `GET /status` is **unauthenticated** (same idea as `/health`) and returns JSON: effective listen address, upstream base URL, upstream probe result, and optional supervisor hints (BiFrost / Qdrant) when `chimera serve` is in use. Do not expose the gateway port to untrusted networks if that metadata matters.
 - **TLS termination** is **not** implemented inside `chimera`. Use a reverse proxy or sidecar for HTTPS in production-style deployments.
 
@@ -29,7 +29,7 @@ When **no valid gateway tokens** are configured, the process serves a **narrow b
 
 ## Config on disk
 
-`gateway.yaml`, `tokens.yaml`, `routing-policy.yaml`, `provider-free-tier.yaml`, and `bifrost.config.json` can hold secrets and policy. Use filesystem permissions (e.g. `chmod 600`) and never commit real `tokens.yaml` or live keys.
+`chimera.yaml`, `api-keys.yaml`, `provider-free-tier.yaml`, and `chimera-broker.config.json` can hold secrets and policy. Use filesystem permissions (e.g. `chmod 600`) and never commit real `api-keys.yaml` or live keys.
 
 ## `chimera serve` (supervisor)
 

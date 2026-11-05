@@ -58,7 +58,7 @@ Operators who run several large workspaces need a reliable way to **re-upload em
 - Moving all SHA rows into operator SQLite with batch sync HTTP (too heavy for v1).
 - Gateway-initiated WebSocket or supervisor signals to the indexer.
 - Full corpus purge API on workspace delete (documented follow-up in workspace plans).
-- Changing embedding or chunking rules (separate "full reindex on gateway version bump" idea in [`indexer.md` plan](../../plans/indexer.md)).
+- Changing embedding or chunking rules (separate "full reindex on gateway version bump" idea in [`indexer.md` plan](../../plans/archive/indexer.md)).
 
 ---
 

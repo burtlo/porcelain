@@ -1,0 +1,140 @@
+# Copy to `chimera.yaml` and edit. Full reference: docs/configuration.md
+#
+# Supervised-stack config for chimera-supervisor / locus-desktop.
+# Assistants and workspaces live in operator SQLite (/ui/settings), not here.
+
+supervisor:
+  listen: "127.0.0.1:7710"
+  log_json: true
+  # Collector gate for ring buffer + /ui logs (independent of per-service emit levels).
+  log_level: "info"
+  # Omit to launch every suite-enabled service (vectorstore, broker, gateway, indexer).
+  # services: [vectorstore, broker, gateway, indexer]
+
+gateway:
+  enabled: true
+  semver: "0.2.0"
+  listen_host: "127.0.0.1"
+  listen_port: 3000
+  # Gateway process emit level (not the shared log collector gate).
+  log_level: "info"
+  timeouts:
+    broker_ms: 5000
+    chat_ms: 300000
+  catalog:
+    poll_ms: 30000
+  auth:
+    api_keys: "./api-keys.yaml"
+  metrics:
+    enabled: true
+
+broker:
+  enabled: true
+  url: "http://127.0.0.1:8080"
+  api_key_env: "CHIMERA_BROKER_API_KEY"
+  log_level: "info"
+  models:
+    free_tier: "./provider-free-tier.yaml"
+    limits: "./provider-model-limits.yaml"
+
+vectorstore:
+  enabled: true
+  url: "http://127.0.0.1:6333"
+  log_level: "info"
+
+indexer:
+  enabled: true
+  # Omit config_path → all indexer tuning lives in this file (recommended for supervised stack).
+  # Set config_path to layer a last-wins overlay (UI PUT writes there; standalone chimera-indexer
+  # can use the same file via --config). Example:
+  # config_path: "indexer.yaml"
+  log_level: "info"
+  job_skip_log: debug
+  job_ingest_log: debug
+  scope_status_poll_ms: -1
+  storage_stats_poll_ms: -1
+  # sync_state_path: "data/indexer/sync-state.json"
+
+# Search platform (ingest + retrieval). HTTP routes remain /v1/rag/*.
+# retrieval_defaults seed new assistants; per-assistant retrieval overrides live in SQLite (v0.4).
+search:
+  enabled: true
+  embedding:
+    path: "/v1/embeddings"
+    model: "ollama/nomic-embed-text:latest"
+    dim: 768
+  chunking:
+    size: 512
+    overlap: 128
+  ingest:
+    max_bytes: 10485760
+  retrieval_defaults:
+    top_k: 8
+    score_threshold: 0.50
+  defaults:
+    project_id: "default"
+    flavor_id: ""
+  coherence:
+    mode: warn
+  tooling:
+    enabled: true
+
+# MCP tool backends (YAML seed). Catalog: docs/reference/mcp-sidecar-catalog.md
+# Operator UI bindings ship in Phase 2c. Harness tool_executor must be enabled on the assistant.
+# Per-tool allows are deny-by-default — list each MCP tool name explicitly under assistants.
+mcp:
+  catalog_max_tools: 32
+  call_timeout_ms: 60000
+  servers:
+    # Blessed no-network sidecar (Phase 2b) — safe local echo for wiring checks.
+    - id: fake_echo
+      disabled: false
+      auto_start: false
+      transport: stdio
+      command: go
+      args:
+        - run
+        - ./chimera/chimera-gateway/internal/mcpclient/fake/cmd
+      env_allowlist: [PATH, HOME, GOROOT, GOPATH, GOMOD, GOWORK, CGO_ENABLED]
+    # Tier B templates — default OFF until you bless an upstream and enable tools per assistant.
+    # - id: git_local
+    #   disabled: true
+    #   transport: stdio
+    #   command: REPLACE_WITH_GIT_MCP_CLI
+    #   args: []
+    #   env_allowlist: [PATH, HOME]
+    # - id: shell_sandbox
+    #   disabled: true
+    #   transport: stdio
+    #   command: REPLACE_WITH_SHELL_MCP_CLI
+    #   args: []
+    #   env_allowlist: [PATH, HOME]
+    # - id: browser_cdp
+    #   disabled: true
+    #   transport: stdio
+    #   command: REPLACE_WITH_BROWSER_MCP_CLI
+    #   args: []
+    #   env_allowlist: [PATH, HOME]
+  assistants:
+    - assistant_id: "REPLACE_WITH_ASSISTANT_MODEL_ID"
+      servers:
+        - server_id: fake_echo
+          tools:
+            echo: true
+        # git_local / shell_sandbox / browser_cdp: no default tool allows (remain off).
+
+# Internal embedding provider: supervised chimera-embed + llama-server (optional).
+#
+# Off unless enabled. When on, the resolved RAG embedding model, dimension, and base URL
+# are taken from this block; the broker/Ollama embedding catalog is not used.
+# chimera-supervisor starts chimera-embed, which starts an operator-supplied llama-server
+# and GGUF model. Relative model/cache paths resolve from this chimera.yaml directory.
+# internal_embedding:
+#   enabled: false
+#   provider: "internal"
+#   model: "internal/nomic-embed-text"
+#   dim: 768
+#   base_url: "http://127.0.0.1:8090"
+#   model_path: "../data/embedding/models/nomic-embed-text.gguf"
+#   cache_dir: "../data/embedding/cache"
+#   log_level: "info"

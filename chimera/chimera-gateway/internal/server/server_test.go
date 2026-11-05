@@ -26,7 +26,7 @@ func TestStatusEndpoint(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, naming.APIKeysFileTarget)
 	writeTokens(t, tokPath, "t", "x")
@@ -89,7 +89,7 @@ func TestUILoginAndState(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-ui-secret", "t1")
@@ -129,7 +129,7 @@ func TestUILoginAndState(t *testing.T) {
 		t.Fatal(err)
 	}
 	gw, _ := st["gateway"].(map[string]any)
-	if gw["virtual_model_id"] != "Chimera-0.1.0" {
+	if gw["assistant_id"] != "Chimera-0.1.0" {
 		t.Fatalf("gateway: %+v", gw)
 	}
 	ov, _ := gw["service_overview"].(map[string]any)
@@ -197,7 +197,7 @@ func TestUISaveGroqKey(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-save", "t1")
@@ -272,7 +272,7 @@ func TestUISaveGroqKey_providerMissing404(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-save404", "t1")
@@ -346,7 +346,7 @@ func TestUISaveRemoveGroqKey(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-rm", "t1")
@@ -415,7 +415,7 @@ func TestUISaveOllamaURL_providerMissingEnvelope(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"m"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-ollama-env", "t1")
@@ -457,7 +457,7 @@ func TestUISaveOllamaURL_providerMissingEnvelope(t *testing.T) {
 	}
 }
 
-func TestChatVirtualModelFallback429(t *testing.T) {
+func TestChatAssistantFallback429(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 
 	var seenModels []string
@@ -487,7 +487,7 @@ func TestChatVirtualModelFallback429(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"groq/a", "groq/b"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "secret-gw", "t1")

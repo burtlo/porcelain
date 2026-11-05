@@ -12,7 +12,7 @@ chat.chimera-broker.outgoing_tokens_count_failed
 chat.provider_limits.config_invalid
 chat.provider_limits.config_missing
 chat.provider_limits.query_failed
-chat.routing.virtual_model_skipped
+chat.routing.assistant_skipped
 chat.tool_router.applied
 chat.tool_router.model_attempt_failed
 chat.tool_router.skipped
@@ -63,10 +63,10 @@ gateway.startup.adminui_filesystem_remote_denied
 gateway.supervisor_logs.catchup_failed
 gateway.supervisor_logs.control_url_missing
 gateway.supervisor_logs.stream_disconnected
-gateway.virtual_model.bootstrap_failed
-gateway.virtual_model.bootstrap_imported
-gateway.virtual_model.gemini_seeded
-gateway.virtual_model.reload_failed
+gateway.assistant.bootstrap_failed
+gateway.assistant.bootstrap_imported
+gateway.assistant.gemini_seeded
+gateway.assistant.reload_failed
 gateway.wrapper.backend.supervisor_ignored
 indexer.job.cancelled
 indexer.supervised.workspaces_poll

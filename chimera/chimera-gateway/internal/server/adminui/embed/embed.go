@@ -53,3 +53,36 @@ func ServePathPrefix(embedPrefix, urlPrefix, contentType string) http.HandlerFun
 		_, _ = w.Write(b)
 	}
 }
+
+// ServeFontPrefix serves woff2 (and related) font files from embedui/fonts/.
+func ServeFontPrefix(embedPrefix, urlPrefix string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := strings.TrimPrefix(r.URL.Path, urlPrefix)
+		p = strings.TrimSpace(p)
+		if p == "" || strings.Contains(p, "..") || strings.HasPrefix(p, "/") || strings.ContainsAny(p, "\\") {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		b, err := ReadFile(embedPrefix + p)
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		ct := "application/octet-stream"
+		switch {
+		case strings.HasSuffix(strings.ToLower(p), ".woff2"):
+			ct = "font/woff2"
+		case strings.HasSuffix(strings.ToLower(p), ".woff"):
+			ct = "font/woff"
+		case strings.HasSuffix(strings.ToLower(p), ".ttf"):
+			ct = "font/ttf"
+		case strings.HasSuffix(strings.ToLower(p), ".js"):
+			ct = "application/javascript; charset=utf-8"
+		case strings.HasSuffix(strings.ToLower(p), ".txt"):
+			ct = "text/plain; charset=utf-8"
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", ct)
+		_, _ = w.Write(b)
+	}
+}

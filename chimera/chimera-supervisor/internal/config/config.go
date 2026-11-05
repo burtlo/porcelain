@@ -90,7 +90,7 @@ func Parse(args []string, build BuildInfo) (Config, error) {
 }
 
 func bindFlags(fs *flag.FlagSet, cfg *Config) {
-	fs.StringVar(&cfg.ConfigPath, "config", "", "Path to gateway.yaml")
+	fs.StringVar(&cfg.ConfigPath, "config", "", "Path to chimera.yaml (default config/chimera.yaml)")
 	fs.StringVar(&cfg.Listen, "listen", defaultSupervisorListen(), "chimera-supervisor control API listen host:port")
 	fs.StringVar(&cfg.GatewayBin, "gateway-bin", DefaultGatewayBin(), "chimera-gateway wrapper binary")
 	fs.StringVar(&cfg.GatewayListen, "gateway-listen", naming.DefaultGatewayListen, "chimera-gateway wrapper listen host:port")

@@ -17,7 +17,7 @@ func WriteContractsJS(w io.Writer) error {
 	var b strings.Builder
 	b.WriteString("/**\n")
 	b.WriteString(" * Operator settings UI constants — generated from internal/naming (gateway_logs.go, contracts.go, logs_ui.go).\n")
-	b.WriteString(" * DO NOT EDIT; run: make operator-contracts-generate\n")
+	b.WriteString(" * DO NOT EDIT; run: make contracts-generate (alias: make operator-contracts-generate)\n")
 	b.WriteString(" */\n")
 	b.WriteString("(function () {\n")
 	b.WriteString("  globalThis.ChimeraSettings = globalThis.ChimeraSettings || {};\n")

@@ -1,6 +1,6 @@
 /**
  * Operator settings UI constants — generated from internal/naming (gateway_logs.go, contracts.go, logs_ui.go).
- * DO NOT EDIT; run: make operator-contracts-generate
+ * DO NOT EDIT; run: make contracts-generate (alias: make operator-contracts-generate)
  */
 (function () {
   globalThis.ChimeraSettings = globalThis.ChimeraSettings || {};

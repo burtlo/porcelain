@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Purpose:
-#   When routing.filter_free_tier_models is true in gateway.yaml, only model ids
+#   When routing.filter_free_tier_models is true in chimera.yaml, only model ids
 #   that appear in BOTH this file (as an exact or pattern match) AND the live
 #   upstream catalog are treated as eligible for merged model listing and for
 #   automatic routing table generation.

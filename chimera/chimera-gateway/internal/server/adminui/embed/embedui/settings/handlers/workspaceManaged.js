@@ -96,6 +96,16 @@ globalThis.ChimeraSettings.Handlers.WorkspaceManaged.mount = function (ctx) {
       return;
     }
     var initial = st.initialSnapshot || [];
+    var workspace =
+      typeof ctx.findOperatorWorkspaceByNumericId === "function"
+        ? ctx.findOperatorWorkspaceByNumericId(wsNum)
+        : null;
+    var card = document.querySelector('[data-workspace-managed-id="' + String(wsNum) + '"]');
+    function policyValue(name, fallback) {
+      var input = card && card.querySelector('[data-ws-policy="' + name + '"]');
+      if (!input) return fallback;
+      return input.type === "checkbox" ? input.checked : String(input.value || fallback);
+    }
     var cur = st.paths;
     var curPersistedIds = {};
     var ci;
@@ -115,7 +125,24 @@ globalThis.ChimeraSettings.Handlers.WorkspaceManaged.mount = function (ctx) {
       if (cur[ci].id == null || isNaN(Number(cur[ci].id))) toAdd.push(pth);
     }
 
-    var chain = Promise.resolve();
+    var chain = fetch("/api/ui/indexer/workspaces/" + wsNum, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_id: workspace && workspace.project_id ? workspace.project_id : "",
+        flavor_id: workspace && workspace.flavor_id ? workspace.flavor_id : "",
+        sensitivity: policyValue("sensitivity", workspace && workspace.sensitivity ? workspace.sensitivity : "internal"),
+        allow_cloud: policyValue("allow_cloud", workspace ? workspace.allow_cloud !== false : true),
+        allow_cloud_summary_only: policyValue("allow_cloud_summary_only", workspace ? workspace.allow_cloud_summary_only === true : false),
+        file_action_policy: policyValue("file_action_policy", workspace && workspace.file_action_policy ? workspace.file_action_policy : "none")
+      })
+    }).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error((j && j.error) || res.statusText || "update workspace failed");
+        return j;
+      });
+    });
     var di;
     for (di = 0; di < toDelete.length; di++) {
       (function (pathId) {

@@ -19,10 +19,10 @@
     return tail.length > 48 ? tail.slice(0, 46) + "…" : tail;
   }
 
-  function virtualModelIdFromUi() {
+  function assistantIdFromUi() {
     var cache = globalThis.gatewayOverviewCache;
-    if (cache && cache.virtual_model_id != null && String(cache.virtual_model_id).trim() !== "") {
-      return String(cache.virtual_model_id).trim();
+    if (cache && cache.assistant_id != null && String(cache.assistant_id).trim() !== "") {
+      return String(cache.assistant_id).trim();
     }
     return "";
   }
@@ -148,7 +148,7 @@
       attempt: attempt,
       chainLen: chainLen,
       clientModel: clientModel,
-      virtualModelId: virtualModelIdFromUi(),
+      assistantId: assistantIdFromUi(),
       outgoingTokens: outgoingTokens
     };
   }
@@ -181,7 +181,7 @@
     if (msg === "chat.routing.model_not_found") return true;
     if (msg === "chat.routing.rate_limit") return true;
     if (msg === "conversation.rag.span" && turnCtx.hasRagAttached) return true;
-    if (ml === "virtual model routing resolved" || ml === "virtual model fallback attempt") return true;
+    if (ml === "assistant routing resolved" || ml === "assistant fallback attempt") return true;
     if (msg === "gateway.http.access" || ml === "http response") {
       var pth = String(flat.path || "").split("?")[0];
       if (pth.indexOf("/v1/chat/completions") >= 0) return true;
@@ -211,7 +211,7 @@
     var chainLen = routingSummary.chainLen;
     var clientModel = routingSummary.clientModel;
     var upstream = routingSummary.upstream;
-    var virtualId = routingSummary.virtualModelId;
+    var virtualId = routingSummary.assistantId;
     var isPassthrough =
       (clientModel && virtualId && clientModel !== virtualId && clientModel === upstream) ||
       (chainLen <= 1 && clientModel && upstream && clientModel === upstream);

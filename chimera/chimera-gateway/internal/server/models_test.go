@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestModelsList_VirtualModelFirst(t *testing.T) {
+func TestModelsList_AssistantFirst(t *testing.T) {
 	t.Setenv(naming.EnvBrokerAPIKeyTarget, "ukey")
 
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func TestModelsList_VirtualModelFirst(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"groq/x"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "t1")
@@ -64,10 +64,10 @@ func TestModelsList_VirtualModelFirst(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(payload.Data) < 2 {
-		t.Fatalf("want virtual + upstream, got %#v", payload.Data)
+		t.Fatalf("want assistant + upstream, got %#v", payload.Data)
 	}
 	if payload.Data[0].ID != "Chimera-0.1.0" {
-		t.Fatalf("virtual first: %q", payload.Data[0].ID)
+		t.Fatalf("assistant first: %q", payload.Data[0].ID)
 	}
 	if payload.Data[1].ID != "groq/x" {
 		t.Fatalf("upstream second: %q", payload.Data[1].ID)
@@ -93,7 +93,7 @@ func TestModelsList_NormalizesMissingOpenAIFields(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"gemini/x"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "t1")
@@ -153,7 +153,7 @@ func TestUIModels_NoGatewayToken(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"ollama/qwen"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "t1")
@@ -186,10 +186,10 @@ func TestUIModels_NoGatewayToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(payload.Data) < 2 {
-		t.Fatalf("want virtual + upstream, got %#v", payload.Data)
+		t.Fatalf("want assistant + upstream, got %#v", payload.Data)
 	}
 	if payload.Data[0].ID != "Chimera-0.1.0" {
-		t.Fatalf("virtual first: %q", payload.Data[0].ID)
+		t.Fatalf("assistant first: %q", payload.Data[0].ID)
 	}
 	if payload.Data[1].ID != "ollama/qwen" {
 		t.Fatalf("upstream second: %q", payload.Data[1].ID)
@@ -217,7 +217,7 @@ func TestModelsList_AvailabilityFilter(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"groq/x"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "tok", "t1")
@@ -266,7 +266,7 @@ func TestModelsList_AvailabilityFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(payload.Data) != 2 {
-		t.Fatalf("want virtual + groq/x only, got %#v", payload.Data)
+		t.Fatalf("want assistant + groq/x only, got %#v", payload.Data)
 	}
 	if payload.Data[0].ID != "Chimera-0.1.0" || payload.Data[1].ID != "groq/x" {
 		t.Fatalf("ids: %#v", payload.Data)

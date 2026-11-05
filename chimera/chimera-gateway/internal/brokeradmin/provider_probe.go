@@ -23,8 +23,10 @@ const configuredProvidersCacheTTL = 60 * time.Second
 
 var (
 	probeCacheMu sync.Mutex
-	probeAbsent  = map[string]bool{}
-	probeNoKeys  = map[string]bool{}
+	// Negative probe caches are scoped by chimera-broker base URL so parallel tests and
+	// multiple broker endpoints cannot cross-contaminate (e.g. groq on broker A vs B).
+	probeAbsent = map[string]map[string]bool{}
+	probeNoKeys = map[string]map[string]bool{}
 
 	configuredMu      sync.Mutex
 	configuredAt      time.Time
@@ -44,11 +46,15 @@ func InvalidateProviderProbeCacheFor(provider string) {
 	name := strings.ToLower(strings.TrimSpace(provider))
 	probeCacheMu.Lock()
 	if name == "" {
-		probeAbsent = map[string]bool{}
-		probeNoKeys = map[string]bool{}
+		probeAbsent = map[string]map[string]bool{}
+		probeNoKeys = map[string]map[string]bool{}
 	} else {
-		delete(probeAbsent, name)
-		delete(probeNoKeys, name)
+		for base := range probeAbsent {
+			delete(probeAbsent[base], name)
+		}
+		for base := range probeNoKeys {
+			delete(probeNoKeys[base], name)
+		}
 	}
 	probeCacheMu.Unlock()
 
@@ -146,45 +152,75 @@ func copyNameSet(in map[string]struct{}) map[string]struct{} {
 	return out
 }
 
-func probeDecision(name string, configured map[string]struct{}, listOK bool) ProviderProbeDecision {
+func normalizeProbeBrokerBase(baseURL string) string {
+	return strings.TrimSuffix(strings.TrimSpace(baseURL), "/")
+}
+
+func probeBrokerBase(client *Client) string {
+	if client == nil {
+		return ""
+	}
+	return normalizeProbeBrokerBase(client.BaseURL)
+}
+
+func probeDecision(baseURL, name string, configured map[string]struct{}, listOK bool) ProviderProbeDecision {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if listOK {
 		if _, ok := configured[name]; !ok {
 			return ProviderProbeDecision{MissingFromConfig: true}
 		}
 	} else {
-		probeCacheMu.Lock()
-		if probeAbsent[name] {
+		base := normalizeProbeBrokerBase(baseURL)
+		if base != "" {
+			probeCacheMu.Lock()
+			if absent := probeAbsent[base]; absent != nil && absent[name] {
+				probeCacheMu.Unlock()
+				return ProviderProbeDecision{MissingFromConfig: true}
+			}
+			if noKeys := probeNoKeys[base]; noKeys != nil && noKeys[name] {
+				probeCacheMu.Unlock()
+				return ProviderProbeDecision{EmptyKeysInConfig: true}
+			}
 			probeCacheMu.Unlock()
-			return ProviderProbeDecision{MissingFromConfig: true}
 		}
-		if probeNoKeys[name] {
-			probeCacheMu.Unlock()
-			return ProviderProbeDecision{EmptyKeysInConfig: true}
-		}
-		probeCacheMu.Unlock()
 	}
 	return ProviderProbeDecision{HTTPProbe: true}
 }
 
-func rememberProviderProbeResult(name string, st int, body []byte) {
+func rememberProviderProbeResult(baseURL, name string, st int, body []byte) {
 	name = strings.ToLower(strings.TrimSpace(name))
+	base := normalizeProbeBrokerBase(baseURL)
+	if base == "" {
+		return
+	}
 	probeCacheMu.Lock()
 	defer probeCacheMu.Unlock()
 	if IsProviderMissingGET(st, body) {
-		probeAbsent[name] = true
-		delete(probeNoKeys, name)
+		if probeAbsent[base] == nil {
+			probeAbsent[base] = map[string]bool{}
+		}
+		probeAbsent[base][name] = true
+		if probeNoKeys[base] != nil {
+			delete(probeNoKeys[base], name)
+		}
 		return
 	}
-	delete(probeAbsent, name)
+	if probeAbsent[base] != nil {
+		delete(probeAbsent[base], name)
+	}
 	if st >= 200 && st < 300 && !strings.EqualFold(name, "ollama") {
 		sum, err := SummarizeProvider(name, body)
 		if err == nil && !sum.KeyConfigured {
-			probeNoKeys[name] = true
+			if probeNoKeys[base] == nil {
+				probeNoKeys[base] = map[string]bool{}
+			}
+			probeNoKeys[base][name] = true
 			return
 		}
 	}
-	delete(probeNoKeys, name)
+	if probeNoKeys[base] != nil {
+		delete(probeNoKeys[base], name)
+	}
 }
 
 // SyntheticProviderGETBody returns a JSON body/status suitable for ClassifyBrokerProviderResult
@@ -210,7 +246,8 @@ func GetProviderForProbe(ctx context.Context, client *Client, name string) (body
 // GetProviderForProbeWithList is like GetProviderForProbe but reuses a governance list already
 // fetched by the caller so one UI poll issues a single GET /api/governance/providers.
 func GetProviderForProbeWithList(ctx context.Context, client *Client, name string, configured map[string]struct{}, listOK bool) (body []byte, status int, err error, httpProbed bool) {
-	dec := probeDecision(name, configured, listOK)
+	baseURL := probeBrokerBase(client)
+	dec := probeDecision(baseURL, name, configured, listOK)
 	if !dec.HTTPProbe {
 		body, status = SyntheticProviderGETBody(name, dec)
 		return body, status, nil, false
@@ -220,9 +257,9 @@ func GetProviderForProbeWithList(ctx context.Context, client *Client, name strin
 	}
 	body, status, err = client.GetProvider(ctx, name)
 	if err == nil {
-		rememberProviderProbeResult(name, status, body)
+		rememberProviderProbeResult(baseURL, name, status, body)
 		if !listOK {
-			dec = probeDecision(name, nil, false)
+			dec = probeDecision(baseURL, name, nil, false)
 			if !dec.HTTPProbe {
 				body, status = SyntheticProviderGETBody(name, dec)
 				return body, status, nil, true

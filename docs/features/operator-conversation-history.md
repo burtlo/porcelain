@@ -6,7 +6,7 @@
 | **Areas** | Gateway operator SQLite, chat persistence, gateway embed UI, admin UI session |
 | **Status** | `current` |
 | **Introduced** | Gateway operator shell v0.2 train |
-| **Originated from** | [`plans/archive/operator-conversation-history.md`](../plans/archive/operator-conversation-history.md) |
+| **Originated from** | [`plans/operator-conversation-history.md`](../plans/archive/operator-conversation-history.md) |
 | **Related features** | [Operator chat UI](operator-chat-ui.md), [Operator left navigation ribbon](operator-left-navigation-ribbon.md), [Operator UI session auth](operator-ui-session-auth.md), [Operator SQLite store](operator-sqlite-store.md) |
 | **Depends on** | [Operator UI session auth](operator-ui-session-auth.md), operator SQLite, live chat renderer |
 | **Last updated** | See git history |
@@ -85,7 +85,7 @@ All conversation routes require authenticated UI session JSON handlers (`Require
 | Session / principal | `internal/server/adminui/session/session.go`, `handler/handler.go` |
 | Store | `internal/operatorstore/conversations.go`, `store.go` |
 | Title helper | `conversationtitle.FromFirstUserMessage` |
-| Chat persistence hooks | `internal/server/server.go`, `virtualmodel_chat.go` |
+| Chat persistence hooks | `internal/server/server.go`, `assistant_chat.go` |
 | RAG metadata | `internal/rag/response_meta.go` |
 | Migration | `migrations/chimera-gateway/operator/000003_conversation_history.sql` |
 | Tests | `embed/embedui_test/chat_history_test.go`, operatorstore unit tests |
@@ -108,6 +108,6 @@ Manual: sign in at `/ui`, send chat messages, open history panel, flag/rename/de
 
 ## References
 
-- Delivery plan: [`plans/archive/operator-conversation-history.md`](../plans/archive/operator-conversation-history.md)
-- Shipped chat UI plan: [`plans/archive/operator-chat-ui.md`](../plans/archive/operator-chat-ui.md)
-- Operator configuration: [`configuration.md`](../configuration.md)
+- Delivery plan: [`plans/operator-conversation-history.md`](../plans/archive/operator-conversation-history.md)
+- Shipped chat UI plan: [`plans/operator-chat-ui.md`](../plans/archive/operator-chat-ui.md)
+- Operator configuration: [`configuration.md`](../configuration.md) — [Chat completions client contract](../configuration.md#chat-completions-client-contract) (`X-Chimera-Conversation-Id`, `X-Chimera-Workspace-Id`, `harness_summary_json` on turns)

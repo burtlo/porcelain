@@ -24,15 +24,15 @@ func TestInternalEmbeddingDefaultsOffAndResolvesPaths(t *testing.T) {
 	}
 }
 
-func TestLoadGatewayYAMLInternalEmbeddingEnabled(t *testing.T) {
+func TestLoadChimeraYAMLInternalEmbeddingEnabled(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	path := filepath.Join(dir, "gateway.yaml")
+	path := filepath.Join(dir, "chimera.yaml")
 	raw := `gateway:
   listen_port: 3000
 vectorstore:
   url: "http://127.0.0.1:6333"
-rag:
+search:
   enabled: true
   embedding:
     model: "ollama/nomic-embed-text:latest"
@@ -45,7 +45,7 @@ internal_embedding:
 	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(path, nil)
+	res, err := LoadChimeraYAML(path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

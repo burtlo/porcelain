@@ -40,15 +40,15 @@
   border: 0;
 }
 
-.sum-vm-fallback-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm),
-.sum-vm-routing-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm),
+.sum-asst-fallback-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm),
+.sum-asst-routing-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm),
 .sg-op-yaml-wrap.sg-op-yaml-wrap--full:has(.sg-op-yaml-cm) {
   display: flex;
   flex-direction: column;
 }
 
-.sum-vm-fallback-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm) .sg-op-yaml-cm,
-.sum-vm-routing-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm) .sg-op-yaml-cm,
+.sum-asst-fallback-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm) .sg-op-yaml-cm,
+.sum-asst-routing-panel__view .sg-op-yaml-wrap:has(.sg-op-yaml-cm) .sg-op-yaml-cm,
 .sg-op-yaml-wrap.sg-op-yaml-wrap--full:has(.sg-op-yaml-cm) .sg-op-yaml-cm {
   flex: 1 1 auto;
   min-height: 0;

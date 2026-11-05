@@ -98,7 +98,7 @@ func CatalogModelIDs(path string) ([]string, error) {
 	return out, nil
 }
 
-// LoadEnsureModelsFromOperatorSQLite reads fallback chain entries from enabled virtual models.
+// LoadEnsureModelsFromOperatorSQLite reads fallback chain entries from enabled assistants.
 func LoadEnsureModelsFromOperatorSQLite(path string) ([]string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -116,11 +116,11 @@ func LoadEnsureModelsFromOperatorSQLite(path string) ([]string, error) {
 	defer db.Close()
 
 	rows, err := db.Query(`SELECT f.chain_json
-		FROM virtual_model_fallback f
-		INNER JOIN virtual_models v ON v.id = f.virtual_model_id
+		FROM assistant_fallback f
+		INNER JOIN assistants v ON v.id = f.assistant_id
 		WHERE v.enabled = 1`)
 	if err != nil {
-		return nil, fmt.Errorf("query virtual model fallback chains: %w", err)
+		return nil, fmt.Errorf("query assistant fallback chains: %w", err)
 	}
 	defer rows.Close()
 
@@ -176,7 +176,7 @@ func MergeEnsureModels(parts ...[]string) []string {
 }
 
 // ApplyContextWindows merges context_window (and known prompt overrides) into cfg.
-// ensureModels lists ids that must exist after seeding (e.g. virtual model fallback chains).
+// ensureModels lists ids that must exist after seeding (e.g. assistant fallback chains).
 func ApplyContextWindows(cfg *providerlimits.Config, catalog map[string]int64, ensureModels []string, opts ApplyOptions) ApplyReport {
 	if cfg == nil {
 		return ApplyReport{}

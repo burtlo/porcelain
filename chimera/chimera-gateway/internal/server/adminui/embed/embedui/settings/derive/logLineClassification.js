@@ -41,8 +41,8 @@ globalThis.ChimeraSettings.Derive = globalThis.ChimeraSettings.Derive || {};
     if (msg === "chat.routing.attempt") return true;
     if (msg === "chat.routing.resolved") return true;
     if (msg === "chat.provider_limits.blocked") return true;
-    if (msg.indexOf("virtual model fallback attempt") >= 0) return true;
-    if (msg.indexOf("virtual model routing resolved") >= 0) return true;
+    if (msg.indexOf("assistant fallback attempt") >= 0) return true;
+    if (msg.indexOf("assistant routing resolved") >= 0) return true;
     return false;
   }
 

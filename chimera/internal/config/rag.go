@@ -7,10 +7,10 @@ import (
 
 // RAG holds resolved retrieval-augmented-generation settings (gateway v0.2).
 //
-// All fields are populated by LoadGatewayYAML from the optional "rag" block in
-// gateway.yaml. When RAG is disabled the rest of the gateway must continue to
-// behave exactly as v0.1; ingest, indexer REST, retrieval, and the /health
-// Qdrant probe are all gated on Enabled.
+// All fields are populated by LoadChimeraYAML from the optional "search" block in
+// chimera.yaml. When search is disabled the rest of the gateway must continue to
+// behave without retrieval; ingest, indexer REST, retrieval, and the /health
+// vectorstore probe are all gated on Enabled.
 type RAG struct {
 	Enabled bool
 
@@ -61,14 +61,7 @@ const (
 	defaultQdrantURL      = "http://127.0.0.1:6333"
 )
 
-// vectorstoreDoc is the YAML shape for chimera-vectorstore (top-level in gateway.yaml).
-type vectorstoreDoc struct {
-	URL      string `yaml:"url"`
-	APIKey   string `yaml:"api_key"`
-	LogLevel string `yaml:"log_level"`
-}
-
-// effective returns a RAG with defaults filled. When rag.enabled is false the
+// effective returns a RAG with defaults filled. When search/rag.enabled is false the
 // gateway stays on the v0.1 path; vectorstore fields are still resolved for health URLs.
 func (d ragDoc) effective(vs vectorstoreDoc) RAG {
 	r := RAG{
@@ -161,24 +154,24 @@ func (r RAG) Validate() error {
 		return nil
 	}
 	if r.QdrantURL == "" {
-		return fmt.Errorf("vectorstore.url is required when rag.enabled=true")
+		return fmt.Errorf("vectorstore.url is required when search.enabled=true")
 	}
 	if !strings.HasPrefix(r.QdrantURL, "http://") && !strings.HasPrefix(r.QdrantURL, "https://") {
 		return fmt.Errorf("vectorstore.url must be http:// or https://, got %q", r.QdrantURL)
 	}
 	if r.EmbeddingDim <= 0 {
-		return fmt.Errorf("rag.embedding.dim must be > 0")
+		return fmt.Errorf("search.embedding.dim must be > 0")
 	}
 	if r.ChunkSize <= 0 || r.ChunkOverlap < 0 || r.ChunkOverlap >= r.ChunkSize {
-		return fmt.Errorf("rag.chunking: size=%d overlap=%d invalid", r.ChunkSize, r.ChunkOverlap)
+		return fmt.Errorf("search.chunking: size=%d overlap=%d invalid", r.ChunkSize, r.ChunkOverlap)
 	}
 	if r.MaxWholeFileBytes > r.MaxIngestBytes {
-		return fmt.Errorf("rag.ingest.max_whole_file_bytes (%d) cannot exceed max_bytes (%d)", r.MaxWholeFileBytes, r.MaxIngestBytes)
+		return fmt.Errorf("search.ingest.max_whole_file_bytes (%d) cannot exceed max_bytes (%d)", r.MaxWholeFileBytes, r.MaxIngestBytes)
 	}
 	return nil
 }
 
-// ragDoc is the YAML shape parsed out of gateway.yaml's "rag" block (orchestration only).
+// ragDoc is the internal YAML shape for the search platform block (orchestration only).
 type ragDoc struct {
 	Enabled   *bool `yaml:"enabled"`
 	Embedding struct {

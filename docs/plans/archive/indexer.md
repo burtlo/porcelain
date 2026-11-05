@@ -105,7 +105,7 @@ This document plans a **portable Go binary** that watches configured directories
 
 **Scope**
 
-1. **Structured status and health reporting (indexer process)**  
+1. **Structured status and health reporting (indexer process)**
    - Emit **stable, parse-friendly** log events (prefer **`slog` JSON** on stderr for supervised mode, or document equivalent key/value fields) for milestones an operator cares about, for example:
      - **Run lifecycle:** `indexer.run.start` / `indexer.run.ready` (roots, config fingerprint or gateway URL host only—no secrets), optional `index_run_id` (UUID) for UI threading.
      - **Discovery / reconciliation:** counts after initial scan—**candidate files**, **skipped** (unchanged inventory, sync state, ignores), **enqueued for upload** (“proposed updates”); per-root breakdown optional.
@@ -114,16 +114,16 @@ This document plans a **portable Go binary** that watches configured directories
      - **Backoff / retry:** when `ingest retry` fires, include **explicit** `next_retry_in` / `delay` and **reason class** (429, 5xx, network); when **paused** for health, log `recovery_poll_interval`, **next_poll_at** (or equivalent), and **which probes** run (`storage/health` vs `/health`).
    - **Security:** unchanged rules—no absolute paths in payloads to the gateway; logs may use **relative** paths consistent with today; no tokens in structured fields.
 
-2. **Supervised `chimera serve`**  
-   - **Optional** indexer child process (off by default), controlled from `gateway.yaml` (or dedicated snippet) and/or CLI flags, for example:
+2. **Supervised `chimera serve`**
+   - **Optional** indexer child process (off by default), controlled from `chimera.yaml` (or dedicated snippet) and/or CLI flags, for example:
      - Path to `chimera-indexer` binary (default: next to `chimera` or on `PATH`).
      - **Working directory** and/or explicit `--config` path for layered YAML.
      - **Environment:** inherit `CHIMERA_GATEWAY_URL` / `CHIMERA_GATEWAY_TOKEN` (or map from gateway’s token store path only if a safe pattern is defined—prefer env inherited from the parent process).
    - **Supervision:** same pattern as Qdrant/BiFrost: `context` cancellation on gateway shutdown; **`Stdout` / `Stderr`** teed to `logStore.Writer("indexer")` so `/api/ui/logs` shows `Application: indexer` lines live.
    - **Bootstrap / RAG off:** do not start the indexer when the gateway is in **bootstrap** mode or **RAG disabled** unless explicitly overridden; document behavior when storage health is **degraded** (indexer may still run and self-pause per existing recovery logic).
 
-3. **Desktop bundle (`chimera` desktop mode)**  
-   - When the **desktop** entry (`chimera serve` + webview per [`ui-tool.plan.md`](ui-tool.plan.md)) is used, **reuse the same supervision block**: if indexer supervision is enabled in config, the **desktop** process starts it and tees logs to `servicelogs`—no second packaging story. **Release bundles** that ship `chimera` + `bifrost-http` + `qdrant` should **optionally** ship `chimera-indexer` beside them and document `gateway.yaml` keys to turn it on.
+3. **Desktop bundle (`chimera` desktop mode)**
+   - When the **desktop** entry (`chimera serve` + webview per [`ui-tool.plan.md`](ui-tool.plan.md)) is used, **reuse the same supervision block**: if indexer supervision is enabled in config, the **desktop** process starts it and tees logs to `servicelogs`—no second packaging story. **Release bundles** that ship `chimera` + `bifrost-http` + `qdrant` should **optionally** ship `chimera-indexer` beside them and document `chimera.yaml` keys to turn it on.
 
 **Non-goals (Phase 5)**
 
@@ -399,7 +399,7 @@ On **every startup** (and periodically during long runs), the indexer **SHOULD**
 
 - [x] **Structured operator events:** discovery/reconciliation **summaries** (candidate / skipped / enqueued counts), **queue/worker** snapshots, **retry/backoff** and **recovery poll** timing fields suitable for [`log-presentation-layer.plan.md`](log-presentation-layer.plan.md); `index_run_id` on every line via slog `With`. See **[`indexer.md`](../../indexer.md) § Structured operator logs** and `internal/indexer/ops_events.go` + milestone `msg` values in `internal/indexer/indexer.go` / `chimera/chimera-indexer/main.go`.
 - [x] **`chimera serve`:** optional supervised `chimera-indexer` subprocess with **stderr/stdout** teed to `servicelogs` source `indexer`; shutdown with gateway; gated when **bootstrap** or **RAG off** unless `start_when_rag_disabled`.
-- [x] **Gateway config + docs:** `gateway.yaml` / `gateway.example.yaml` documents supervision flags; operator UI `/ui/indexer` + `/api/ui/indexer/*` for the single supervised `config_path` file.
+- [x] **Gateway config + docs:** `chimera.yaml` / `gateway.example.yaml` documents supervision flags; operator UI `/ui/indexer` + `/api/ui/indexer/*` for the single supervised `config_path` file.
 - [x] **Desktop:** desktop webview `chimeraPickFolder` (native directory dialog via `dlgs`) for the Indexer tab; same supervision path as `chimera serve` when enabled.
 
 **Phase 6**

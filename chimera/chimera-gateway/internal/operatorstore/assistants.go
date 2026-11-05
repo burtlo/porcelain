@@ -1,0 +1,612 @@
+package operatorstore
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+)
+
+const (
+	VisibilityPublic  = "public"
+	VisibilityPrivate = "private"
+)
+
+// Assistant is one operator-managed assistant with routing attachments.
+type Assistant struct {
+	ID                   int64
+	ModelID              string
+	Name                 string
+	Version              string
+	Description          string
+	Enabled              bool
+	Visibility           string
+	CreatedByPrincipalID string
+	TenantID             string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	FallbackChain        []string
+	RoutingPolicyYAML    string
+	RoutingPolicyEnabled bool
+	ToolRouterEnabled    bool
+	RouterModels         []string
+	ToolRouterConfidence float64
+	HarnessModules       []HarnessModule
+}
+
+// RoutingRuleDefinition is a reusable routing rule catalog entry.
+type RoutingRuleDefinition struct {
+	ID                int64
+	Name              string
+	Slug              string
+	DefaultConfigJSON string
+	Description       string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// CreateAssistantInput is metadata for a new assistant (routing filled separately).
+type CreateAssistantInput struct {
+	ModelID                 string
+	Name                    string
+	Version                 string
+	Description             string
+	Visibility              string
+	CreatedByPrincipalID    string
+	TenantID                string
+	Enabled                 bool
+	DefaultRetrievalEnabled bool // seeds harness retrieval module (gateway RAG on/off)
+}
+
+func normalizeVisibility(v string) string {
+	v = strings.TrimSpace(strings.ToLower(v))
+	if v == VisibilityPrivate {
+		return VisibilityPrivate
+	}
+	return VisibilityPublic
+}
+
+func (s *Store) countAssistants(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM assistants`).Scan(&n)
+	return n, err
+}
+
+// HasAssistants reports whether any assistant rows exist.
+func (s *Store) HasAssistants(ctx context.Context) (bool, error) {
+	n, err := s.countAssistants(ctx)
+	return n > 0, err
+}
+
+// ListAssistants returns models visible to principalID within tenantID.
+func (s *Store) ListAssistants(ctx context.Context, tenantID, principalID string) ([]Assistant, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, model_id, name, version, description, enabled, visibility,
+       created_by_principal_id, tenant_id, created_at, updated_at
+FROM assistants
+WHERE tenant_id = ? OR tenant_id = ''
+ORDER BY id`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Assistant
+	for rows.Next() {
+		vm, err := scanAssistantRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		if vm.Visibility == VisibilityPrivate && vm.CreatedByPrincipalID != "" &&
+			principalID != "" && vm.CreatedByPrincipalID != principalID {
+			continue
+		}
+		out = append(out, vm)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if err := s.loadAssistantRouting(ctx, &out[i]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// ListEnabledAssistants returns enabled models for runtime resolution (all tenants merged).
+func (s *Store) ListEnabledAssistants(ctx context.Context) ([]Assistant, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, model_id, name, version, description, enabled, visibility,
+       created_by_principal_id, tenant_id, created_at, updated_at
+FROM assistants
+WHERE enabled = 1
+ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Assistant
+	for rows.Next() {
+		vm, err := scanAssistantRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, vm)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if err := s.loadAssistantRouting(ctx, &out[i]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func scanAssistantRow(rows *sql.Rows) (Assistant, error) {
+	var vm Assistant
+	var desc, vis, creator, tenant, ca, ua string
+	var enabled int
+	if err := rows.Scan(&vm.ID, &vm.ModelID, &vm.Name, &vm.Version, &desc, &enabled, &vis,
+		&creator, &tenant, &ca, &ua); err != nil {
+		return Assistant{}, err
+	}
+	vm.Description = desc
+	vm.Enabled = enabled != 0
+	vm.Visibility = vis
+	vm.CreatedByPrincipalID = creator
+	vm.TenantID = tenant
+	vm.CreatedAt, _ = time.Parse(time.RFC3339Nano, ca)
+	vm.UpdatedAt, _ = time.Parse(time.RFC3339Nano, ua)
+	return vm, nil
+}
+
+func (s *Store) loadAssistantRouting(ctx context.Context, vm *Assistant) error {
+	var chainJSON string
+	err := s.db.QueryRowContext(ctx, `
+SELECT chain_json FROM assistant_fallback WHERE assistant_id = ?`, vm.ID).Scan(&chainJSON)
+	if err == sql.ErrNoRows {
+		vm.FallbackChain = nil
+	} else if err != nil {
+		return err
+	} else if chainJSON != "" {
+		_ = json.Unmarshal([]byte(chainJSON), &vm.FallbackChain)
+	}
+
+	var polEnabled int
+	var polYAML string
+	err = s.db.QueryRowContext(ctx, `
+SELECT enabled, policy_yaml FROM assistant_routing_policy WHERE assistant_id = ?`, vm.ID).
+		Scan(&polEnabled, &polYAML)
+	if err == sql.ErrNoRows {
+		vm.RoutingPolicyEnabled = false
+		vm.RoutingPolicyYAML = ""
+	} else if err != nil {
+		return err
+	} else {
+		vm.RoutingPolicyEnabled = polEnabled != 0
+		vm.RoutingPolicyYAML = polYAML
+	}
+
+	var trEnabled int
+	var routerJSON string
+	var threshold float64
+	err = s.db.QueryRowContext(ctx, `
+SELECT enabled, router_models_json, confidence_threshold
+FROM assistant_tool_router WHERE assistant_id = ?`, vm.ID).
+		Scan(&trEnabled, &routerJSON, &threshold)
+	if err == sql.ErrNoRows {
+		vm.ToolRouterEnabled = false
+		vm.RouterModels = nil
+		vm.ToolRouterConfidence = 0.5
+	} else if err != nil {
+		return err
+	} else {
+		vm.ToolRouterEnabled = trEnabled != 0
+		vm.ToolRouterConfidence = threshold
+		if routerJSON != "" {
+			_ = json.Unmarshal([]byte(routerJSON), &vm.RouterModels)
+		}
+	}
+	return s.loadAssistantHarness(ctx, vm)
+}
+
+// GetAssistantByID loads one model by row id and tenant scope.
+func (s *Store) GetAssistantByID(ctx context.Context, tenantID string, id int64) (*Assistant, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	var vm Assistant
+	var desc, vis, creator, tid, ca, ua string
+	var enabled int
+	err := s.db.QueryRowContext(ctx, `
+SELECT id, model_id, name, version, description, enabled, visibility,
+       created_by_principal_id, tenant_id, created_at, updated_at
+FROM assistants WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID).
+		Scan(&vm.ID, &vm.ModelID, &vm.Name, &vm.Version, &desc, &enabled, &vis,
+			&creator, &tid, &ca, &ua)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	vm.Description = desc
+	vm.Enabled = enabled != 0
+	vm.Visibility = vis
+	vm.CreatedByPrincipalID = creator
+	vm.TenantID = tid
+	vm.CreatedAt, _ = time.Parse(time.RFC3339Nano, ca)
+	vm.UpdatedAt, _ = time.Parse(time.RFC3339Nano, ua)
+	if err := s.loadAssistantRouting(ctx, &vm); err != nil {
+		return nil, err
+	}
+	return &vm, nil
+}
+
+// GetAssistantByModelID loads by client-facing model id.
+func (s *Store) GetAssistantByModelID(ctx context.Context, modelID string) (*Assistant, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	modelID = strings.TrimSpace(modelID)
+	if modelID == "" {
+		return nil, nil
+	}
+	var vm Assistant
+	var desc, vis, creator, tenant, ca, ua string
+	var enabled int
+	err := s.db.QueryRowContext(ctx, `
+SELECT id, model_id, name, version, description, enabled, visibility,
+       created_by_principal_id, tenant_id, created_at, updated_at
+FROM assistants WHERE model_id = ?`, modelID).
+		Scan(&vm.ID, &vm.ModelID, &vm.Name, &vm.Version, &desc, &enabled, &vis,
+			&creator, &tenant, &ca, &ua)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	vm.Description = desc
+	vm.Enabled = enabled != 0
+	vm.Visibility = vis
+	vm.CreatedByPrincipalID = creator
+	vm.TenantID = tenant
+	vm.CreatedAt, _ = time.Parse(time.RFC3339Nano, ca)
+	vm.UpdatedAt, _ = time.Parse(time.RFC3339Nano, ua)
+	if err := s.loadAssistantRouting(ctx, &vm); err != nil {
+		return nil, err
+	}
+	return &vm, nil
+}
+
+// CreateAssistant inserts metadata and empty routing rows.
+func (s *Store) CreateAssistant(ctx context.Context, in CreateAssistantInput) (*Assistant, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	in.ModelID = strings.TrimSpace(in.ModelID)
+	in.Name = strings.TrimSpace(in.Name)
+	in.Version = strings.TrimSpace(in.Version)
+	if in.Name == "" || in.Version == "" {
+		return nil, fmt.Errorf("name and version required")
+	}
+	if in.ModelID == "" {
+		in.ModelID = in.Name + "-" + in.Version
+	}
+	now := s.nowRFC3339()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	enabled := 1
+	if !in.Enabled {
+		enabled = 0
+	}
+	res, err := tx.ExecContext(ctx, `
+INSERT INTO assistants (model_id, name, version, description, enabled, visibility,
+	created_by_principal_id, tenant_id, created_at, updated_at)
+VALUES (?,?,?,?,?,?,?,?,?,?)`,
+		in.ModelID, in.Name, in.Version, strings.TrimSpace(in.Description), enabled,
+		normalizeVisibility(in.Visibility), strings.TrimSpace(in.CreatedByPrincipalID),
+		strings.TrimSpace(in.TenantID), now, now)
+	if err != nil {
+		return nil, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO assistant_fallback (assistant_id, chain_json, updated_at) VALUES (?,?,?)`,
+		id, "[]", now); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO assistant_routing_policy (assistant_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)`,
+		id, 0, "", now); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO assistant_tool_router (assistant_id, enabled, router_models_json, confidence_threshold, updated_at)
+VALUES (?,?,?,?,?)`, id, 0, "[]", 0.5, now); err != nil {
+		return nil, err
+	}
+	if err := s.insertDefaultHarnessModulesTx(ctx, tx, id, in.DefaultRetrievalEnabled, now); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s.GetAssistantByID(ctx, in.TenantID, id)
+}
+
+// UpdateAssistantMetadata updates name, version, description, enabled, visibility.
+func (s *Store) UpdateAssistantMetadata(ctx context.Context, tenantID string, id int64, name, version, description string, enabled *bool, visibility *string) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	w, err := s.GetAssistantByID(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if w == nil {
+		return fmt.Errorf("assistant not found")
+	}
+	if strings.TrimSpace(name) != "" {
+		w.Name = strings.TrimSpace(name)
+	}
+	if strings.TrimSpace(version) != "" {
+		w.Version = strings.TrimSpace(version)
+	}
+	w.Description = strings.TrimSpace(description)
+	en := w.Enabled
+	if enabled != nil {
+		en = *enabled
+	}
+	vis := w.Visibility
+	if visibility != nil {
+		vis = normalizeVisibility(*visibility)
+	}
+	now := s.nowRFC3339()
+	res, err := s.db.ExecContext(ctx, `
+UPDATE assistants SET name = ?, version = ?, description = ?, enabled = ?, visibility = ?, updated_at = ?
+WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`,
+		w.Name, w.Version, w.Description, boolToInt(en), vis, now, id, tenantID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("assistant not found")
+	}
+	return nil
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// DeleteAssistant removes a assistant and cascaded routing rows.
+func (s *Store) DeleteAssistant(ctx context.Context, tenantID string, id int64) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	res, err := s.db.ExecContext(ctx, `
+DELETE FROM assistants WHERE id = ? AND (tenant_id = ? OR tenant_id = '')`, id, tenantID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("assistant not found")
+	}
+	return nil
+}
+
+// SetAssistantFallback saves the ordered fallback chain.
+func (s *Store) SetAssistantFallback(ctx context.Context, tenantID string, id int64, chain []string) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	if len(chain) == 0 {
+		return fmt.Errorf("fallback chain must be non-empty")
+	}
+	for _, m := range chain {
+		if strings.TrimSpace(m) == "" {
+			return fmt.Errorf("fallback chain contains empty model id")
+		}
+	}
+	w, err := s.GetAssistantByID(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if w == nil {
+		return fmt.Errorf("assistant not found")
+	}
+	b, err := json.Marshal(chain)
+	if err != nil {
+		return err
+	}
+	now := s.nowRFC3339()
+	_, err = s.db.ExecContext(ctx, `
+INSERT INTO assistant_fallback (assistant_id, chain_json, updated_at) VALUES (?,?,?)
+ON CONFLICT(assistant_id) DO UPDATE SET chain_json = excluded.chain_json, updated_at = excluded.updated_at`,
+		id, string(b), now)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
+	return err
+}
+
+// SetAssistantRoutingPolicy saves policy YAML and enabled toggle.
+func (s *Store) SetAssistantRoutingPolicy(ctx context.Context, tenantID string, id int64, enabled bool, policyYAML string) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	w, err := s.GetAssistantByID(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if w == nil {
+		return fmt.Errorf("assistant not found")
+	}
+	now := s.nowRFC3339()
+	_, err = s.db.ExecContext(ctx, `
+INSERT INTO assistant_routing_policy (assistant_id, enabled, policy_yaml, updated_at) VALUES (?,?,?,?)
+ON CONFLICT(assistant_id) DO UPDATE SET enabled = excluded.enabled, policy_yaml = excluded.policy_yaml, updated_at = excluded.updated_at`,
+		id, boolToInt(enabled), policyYAML, now)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
+	return err
+}
+
+// SetAssistantToolRouter saves tool-router settings for a assistant.
+func (s *Store) SetAssistantToolRouter(ctx context.Context, tenantID string, id int64, enabled bool, routerModels []string, threshold float64) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	w, err := s.GetAssistantByID(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if w == nil {
+		return fmt.Errorf("assistant not found")
+	}
+	if routerModels == nil {
+		routerModels = []string{}
+	}
+	b, err := json.Marshal(routerModels)
+	if err != nil {
+		return err
+	}
+	now := s.nowRFC3339()
+	_, err = s.db.ExecContext(ctx, `
+INSERT INTO assistant_tool_router (assistant_id, enabled, router_models_json, confidence_threshold, updated_at)
+VALUES (?,?,?,?,?)
+ON CONFLICT(assistant_id) DO UPDATE SET enabled = excluded.enabled,
+	router_models_json = excluded.router_models_json, confidence_threshold = excluded.confidence_threshold,
+	updated_at = excluded.updated_at`,
+		id, boolToInt(enabled), string(b), threshold, now)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE assistants SET updated_at = ? WHERE id = ?`, now, id)
+	return err
+}
+
+// UpsertRoutingRuleDefinition inserts or updates a catalog rule by slug.
+func (s *Store) UpsertRoutingRuleDefinition(ctx context.Context, name, slug, defaultConfigJSON, description string) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("operator store unavailable")
+	}
+	name = strings.TrimSpace(name)
+	slug = strings.TrimSpace(slug)
+	if name == "" || slug == "" {
+		return fmt.Errorf("name and slug required")
+	}
+	if defaultConfigJSON == "" {
+		defaultConfigJSON = "{}"
+	}
+	now := s.nowRFC3339()
+	_, err := s.db.ExecContext(ctx, `
+INSERT INTO routing_rule_definitions (name, slug, default_config_json, description, created_at, updated_at)
+VALUES (?,?,?,?,?,?)
+ON CONFLICT(slug) DO UPDATE SET name = excluded.name, default_config_json = excluded.default_config_json,
+	description = excluded.description, updated_at = excluded.updated_at`,
+		name, slug, defaultConfigJSON, strings.TrimSpace(description), now, now)
+	return err
+}
+
+// ListRoutingRuleDefinitions returns all catalog entries.
+func (s *Store) ListRoutingRuleDefinitions(ctx context.Context) ([]RoutingRuleDefinition, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("operator store unavailable")
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, name, slug, default_config_json, description, created_at, updated_at
+FROM routing_rule_definitions ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RoutingRuleDefinition
+	for rows.Next() {
+		var d RoutingRuleDefinition
+		var ca, ua string
+		if err := rows.Scan(&d.ID, &d.Name, &d.Slug, &d.DefaultConfigJSON, &d.Description, &ca, &ua); err != nil {
+			return nil, err
+		}
+		d.CreatedAt, _ = time.Parse(time.RFC3339Nano, ca)
+		d.UpdatedAt, _ = time.Parse(time.RFC3339Nano, ua)
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+// InsertAssistantFull inserts a complete assistant in one transaction (bootstrap/tests).
+func (s *Store) InsertAssistantFull(ctx context.Context, vm Assistant) (*Assistant, error) {
+	in := CreateAssistantInput{
+		ModelID:                 vm.ModelID,
+		Name:                    vm.Name,
+		Version:                 vm.Version,
+		Description:             vm.Description,
+		Visibility:              vm.Visibility,
+		CreatedByPrincipalID:    vm.CreatedByPrincipalID,
+		TenantID:                vm.TenantID,
+		Enabled:                 vm.Enabled,
+		DefaultRetrievalEnabled: true,
+	}
+	created, err := s.CreateAssistant(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	if len(vm.FallbackChain) > 0 {
+		if err := s.SetAssistantFallback(ctx, vm.TenantID, created.ID, vm.FallbackChain); err != nil {
+			return nil, err
+		}
+	}
+	if vm.RoutingPolicyYAML != "" || vm.RoutingPolicyEnabled {
+		if err := s.SetAssistantRoutingPolicy(ctx, vm.TenantID, created.ID, vm.RoutingPolicyEnabled, vm.RoutingPolicyYAML); err != nil {
+			return nil, err
+		}
+	}
+	if vm.ToolRouterEnabled || len(vm.RouterModels) > 0 {
+		th := vm.ToolRouterConfidence
+		if th <= 0 {
+			th = 0.5
+		}
+		if err := s.SetAssistantToolRouter(ctx, vm.TenantID, created.ID, vm.ToolRouterEnabled, vm.RouterModels, th); err != nil {
+			return nil, err
+		}
+	}
+	if len(vm.HarnessModules) > 0 {
+		if err := s.SetAssistantHarness(ctx, vm.TenantID, created.ID, vm.HarnessModules); err != nil {
+			return nil, err
+		}
+	}
+	return s.GetAssistantByID(ctx, vm.TenantID, created.ID)
+}

@@ -19,7 +19,7 @@ globalThis.ChimeraSettings.Summarized.mountRebuildPolicy = function (ctx) {
 
   function summarizedAdminEditingActive() {
     if (ctx.adminUserDrafts && ctx.adminUserDrafts.length) return true;
-    if (ctx.virtualModelDrafts && ctx.virtualModelDrafts.length) return true;
+    if (ctx.assistantDrafts && ctx.assistantDrafts.length) return true;
     if (ctx.workspaceManagedEditId != null) return true;
     if (ctx.adminProviderModelsEditingId) return true;
     return false;
@@ -47,30 +47,30 @@ globalThis.ChimeraSettings.Summarized.mountRebuildPolicy = function (ctx) {
     return false;
   }
 
-  function activeVirtualModelDraftId(el) {
+  function activeAssistantDraftId(el) {
     if (!el) return "";
     if (el.getAttribute) {
       var fromField = el.getAttribute("data-vm-draft-id");
       if (fromField) return String(fromField).trim();
     }
     if (!el.closest) return "";
-    var card = el.closest(".sum-card--virtual-model-draft");
+    var card = el.closest(".sum-card--assistant-draft");
     if (!card) return "";
     if (card.getAttribute) {
-      var fromCard = card.getAttribute("data-virtual-model-draft");
+      var fromCard = card.getAttribute("data-assistant-draft");
       if (fromCard) return String(fromCard).trim();
     }
     var cardId = card.id || "";
-    if (cardId.indexOf("virtual-model-draft-") === 0) {
-      return cardId.slice("virtual-model-draft-".length);
+    if (cardId.indexOf("assistant-draft-") === 0) {
+      return cardId.slice("assistant-draft-".length);
     }
     return "";
   }
 
-  function virtualModelDraftInteractionActive(el) {
-    var draftId = activeVirtualModelDraftId(el);
+  function assistantDraftInteractionActive(el) {
+    var draftId = activeAssistantDraftId(el);
     if (!draftId) return false;
-    var drafts = ctx.virtualModelDrafts;
+    var drafts = ctx.assistantDrafts;
     if (!drafts || !drafts.length) return false;
     for (var vdi = 0; vdi < drafts.length; vdi++) {
       if (drafts[vdi] && String(drafts[vdi].id) === String(draftId)) return true;
@@ -85,15 +85,15 @@ globalThis.ChimeraSettings.Summarized.mountRebuildPolicy = function (ctx) {
     if (!a.closest("#panel-summarized")) return false;
     var tag = String(a.tagName || "").toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select") {
-      if (virtualModelDraftInteractionActive(a)) return true;
-      if (!(a.closest && a.closest(".sum-card--virtual-model-draft"))) return true;
+      if (assistantDraftInteractionActive(a)) return true;
+      if (!(a.closest && a.closest(".sum-card--assistant-draft"))) return true;
     }
     if (a.classList && a.classList.contains("sum-evlog__search")) return true;
     if (a.matches && a.matches("[data-evlog-filter-status]")) return true;
     var aid = a.id != null ? String(a.id) : "";
     if (aid.indexOf("vm-") === 0 && (tag === "input" || tag === "textarea" || tag === "select")) return true;
-    if (a.closest && a.closest(".sum-card--virtual-model")) return true;
-    if (virtualModelDraftInteractionActive(a)) return true;
+    if (a.closest && a.closest(".sum-card--assistant")) return true;
+    if (assistantDraftInteractionActive(a)) return true;
     return false;
   }
 
@@ -112,15 +112,15 @@ globalThis.ChimeraSettings.Summarized.mountRebuildPolicy = function (ctx) {
       }
     }
     var gwVm = ctx.adminStateCache && ctx.adminStateCache.gateway;
-    var vmList = gwVm && gwVm.virtual_models && Array.isArray(gwVm.virtual_models) ? gwVm.virtual_models : [];
+    var vmList = gwVm && gwVm.assistants && Array.isArray(gwVm.assistants) ? gwVm.assistants : [];
     for (var vmi = 0; vmi < vmList.length; vmi++) {
       var vmRow = vmList[vmi];
       if (!vmRow || vmRow.id == null) continue;
       var vmKey = String(vmRow.id);
-      var vmCardId = "virtual-model-" + vmKey;
+      var vmCardId = "assistant-" + vmKey;
       var vmEl = document.getElementById(vmCardId);
       if (vmEl && vmEl.open) skip[vmCardId] = true;
-      var vmUi = ctx.virtualModelUi && ctx.virtualModelUi[vmKey];
+      var vmUi = ctx.assistantUi && ctx.assistantUi[vmKey];
       if (vmUi && (vmUi.identityEditing || vmUi.fallbackEditing || vmUi.routingEditing || vmUi.routerEditing)) {
         skip[vmCardId] = true;
       }

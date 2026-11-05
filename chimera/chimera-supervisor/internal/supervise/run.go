@@ -29,22 +29,28 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 	path := strings.TrimSpace(cfg.ConfigPath)
 	if path == "" {
 		var err error
-		path, err = gwconfig.ResolveGatewayConfigPath()
+		path, err = gwconfig.ResolveChimeraConfigPath()
 		if err != nil {
 			return svconfig.Exitf(2, "%v", err)
 		}
 	}
 
-	logStore := servicelogs.New(servicelogs.DefaultMaxLines)
-	logLevel := resolveLogLevel(path)
-	supSink := LogSink(logStore.Writer(servicelogs.SourceChimeraSupervisor), supervisorline.NewWriter, logLevel)
-	log := buildLogger(supSink, logLevel, cfg.LogJSON)
-	if cfg.LogJSON {
-		_ = os.Setenv(logfmt.EnvLogJSON, "1")
-	}
-	res, err := gwconfig.LoadGatewayYAML(path, nil)
+	res, err := gwconfig.LoadChimeraYAML(path, nil)
 	if err != nil {
-		return svconfig.Exitf(1, "load gateway.yaml: %v", err)
+		return svconfig.Exitf(1, "load chimera.yaml: %v", err)
+	}
+	applySupervisorYAMLOverrides(&cfg, res)
+
+	logStore := servicelogs.New(servicelogs.DefaultMaxLines)
+	logLevel := resolveCollectorLogLevel(res)
+	supSink := LogSink(logStore.Writer(servicelogs.SourceChimeraSupervisor), supervisorline.NewWriter, logLevel)
+	logJSON := cfg.LogJSON
+	if res.SupervisorLogJSON {
+		logJSON = true
+	}
+	log := buildLogger(supSink, logLevel, logJSON)
+	if logJSON {
+		_ = os.Setenv(logfmt.EnvLogJSON, "1")
 	}
 	embedEndpoint := strings.TrimSpace(cfg.EmbedEndpoint)
 	if res.InternalEmbedding.Enabled && embedEndpoint == "" {
@@ -62,10 +68,23 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 	if strings.TrimSpace(res.TokensPath) != "" {
 		bootstrap = tokens.IsBootstrapMode(res.TokensPath)
 	}
+
+	launch, lerr := res.ResolveSupervisorServices()
+	if lerr != nil {
+		return svconfig.Exitf(1, "%v", lerr)
+	}
+	want := map[string]bool{}
+	for _, s := range launch {
+		want[s] = true
+	}
+
 	vectorstoreWrapperBin := strings.TrimSpace(cfg.VectorstoreBin)
+	if !want[gwconfig.ServiceVectorstore] {
+		vectorstoreWrapperBin = ""
+	}
 	controlState := control.NewState()
 	controlState.SetVersions(version, commit)
-	controlState.SetRequired(true, vectorstoreWrapperBin != "")
+	controlState.SetRequired(want[gwconfig.ServiceBroker] || want[gwconfig.ServiceGateway], want[gwconfig.ServiceVectorstore])
 	controlState.SetEmbedRequired(res.InternalEmbedding.Enabled)
 	controlState.SetEmbedEndpoint(embedEndpoint)
 	controlState.SetEndpoints(strings.TrimSpace(cfg.BrokerEndpoint), strings.TrimSpace(cfg.VectorstoreEndpoint))
@@ -142,10 +161,7 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 	}
 
 	if !bootstrap {
-		// Start vectorstore and broker before the gateway wrapper: the inner gateway
-		// /health probe requires upstream broker (and vectorstore when RAG is on), so
-		// gateway readiness cannot succeed until those backends are up.
-		if vectorstoreWrapperBin != "" {
+		if want[gwconfig.ServiceVectorstore] && vectorstoreWrapperBin != "" {
 			if err := startVectorstoreChild(cfg, res, controlBaseURL, logStore, logLevel, log, controlState, vectorstoreWrapperBin, &vectorstoreProc, &vectorstoreWait, vectorstoreReadyzURL, stopChildrenFast); err != nil {
 				return err
 			}
@@ -158,13 +174,22 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 				return err
 			}
 		}
-		if err := startBrokerChild(cfg, res, controlBaseURL, logStore, logLevel, log, controlState, &brokerProc, &brokerWaitErr, brokerReadyzURL, vectorstoreWait, stopChildrenFast); err != nil {
-			return err
+		if want[gwconfig.ServiceBroker] {
+			if err := startBrokerChild(cfg, res, controlBaseURL, logStore, logLevel, log, controlState, &brokerProc, &brokerWaitErr, brokerReadyzURL, vectorstoreWait, stopChildrenFast); err != nil {
+				return err
+			}
 		}
-		if err := startGatewayChild(cfg, path, controlBaseURL, logStore, logLevel, log, controlState, &gatewayProc, &gatewayWaitErr, gatewayReadyzURL, stopChildrenFast); err != nil {
-			return err
+		if want[gwconfig.ServiceGateway] {
+			if err := startGatewayChild(cfg, path, controlBaseURL, logStore, logLevel, log, controlState, &gatewayProc, &gatewayWaitErr, gatewayReadyzURL, stopChildrenFast); err != nil {
+				return err
+			}
 		}
-		startIndexerChild(res, cfg, path, controlBaseURL, logStore, logLevel, log, indexerCtx, &indexerProc, &indexerWait)
+		if want[gwconfig.ServiceIndexer] {
+			startIndexerChild(res, cfg, path, controlBaseURL, logStore, logLevel, log, indexerCtx, &indexerProc, &indexerWait)
+		} else if log != nil {
+			log.Info("indexer not in supervisor.services", "msg", "chimera-supervisor.indexer.skipped",
+				"indexer_enabled", res.IndexerEnabled)
+		}
 	} else {
 		// Bootstrap: gateway-only loopback setup surface until api-keys.yaml exists.
 		if err := startGatewayChild(cfg, path, controlBaseURL, logStore, logLevel, log, controlState, &gatewayProc, &gatewayWaitErr, gatewayReadyzURL, stopChildrenFast); err != nil {
@@ -178,8 +203,12 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 		log.Info("shutting down gracefully", "msg", "chimera-supervisor.shutdown.graceful_start")
 		stopChildrenGraceful()
 	}()
-	brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "gateway", gatewayReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitGateway)
-	brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "broker", brokerReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitBroker)
+	if want[gwconfig.ServiceGateway] {
+		brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "gateway", gatewayReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitGateway)
+	}
+	if want[gwconfig.ServiceBroker] {
+		brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "broker", brokerReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitBroker)
+	}
 	if vectorstoreReadyzURL != "" {
 		brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "vectorstore", vectorstoreReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitVectorstore)
 	}
@@ -189,4 +218,50 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 	<-rootCtx.Done()
 	stopChildrenGraceful()
 	return nil
+}
+
+// applySupervisorYAMLOverrides fills empty CLI config fields from chimera.yaml supervisor:.
+func applySupervisorYAMLOverrides(cfg *svconfig.Config, res *gwconfig.Resolved) {
+	if cfg == nil || res == nil {
+		return
+	}
+	if strings.TrimSpace(cfg.Listen) == "" && res.SupervisorListen != "" {
+		cfg.Listen = res.SupervisorListen
+	}
+	if strings.TrimSpace(cfg.GatewayBin) == "" && res.SupervisorGatewayBin != "" {
+		cfg.GatewayBin = res.SupervisorGatewayBin
+	}
+	if strings.TrimSpace(cfg.GatewayListen) == "" && res.SupervisorGatewayListen != "" {
+		cfg.GatewayListen = res.SupervisorGatewayListen
+	}
+	if strings.TrimSpace(cfg.BrokerBin) == "" && res.SupervisorBrokerBin != "" {
+		cfg.BrokerBin = res.SupervisorBrokerBin
+	}
+	if strings.TrimSpace(cfg.BrokerListen) == "" && res.SupervisorBrokerListen != "" {
+		cfg.BrokerListen = res.SupervisorBrokerListen
+	}
+	if strings.TrimSpace(cfg.BrokerEndpoint) == "" && res.SupervisorBrokerEndpoint != "" {
+		cfg.BrokerEndpoint = res.SupervisorBrokerEndpoint
+	}
+	if strings.TrimSpace(cfg.BrokerDataDir) == "" && res.SupervisorBrokerDataDir != "" {
+		cfg.BrokerDataDir = res.SupervisorBrokerDataDir
+	}
+	if strings.TrimSpace(cfg.VectorstoreBin) == "" && res.SupervisorVectorstoreBin != "" {
+		cfg.VectorstoreBin = res.SupervisorVectorstoreBin
+	}
+	if strings.TrimSpace(cfg.VectorstoreListen) == "" && res.SupervisorVectorstoreListen != "" {
+		cfg.VectorstoreListen = res.SupervisorVectorstoreListen
+	}
+	if strings.TrimSpace(cfg.VectorstoreEndpoint) == "" && res.SupervisorVectorstoreEndpoint != "" {
+		cfg.VectorstoreEndpoint = res.SupervisorVectorstoreEndpoint
+	}
+	if strings.TrimSpace(cfg.VectorstoreDataPath) == "" && res.SupervisorVectorstoreDataPath != "" {
+		cfg.VectorstoreDataPath = res.SupervisorVectorstoreDataPath
+	}
+	if res.SupervisorShutdownTimeoutMS > 0 {
+		cfg.ShutdownTimeout = time.Duration(res.SupervisorShutdownTimeoutMS) * time.Millisecond
+	}
+	if res.SupervisorTerminateWaitMS > 0 {
+		cfg.TerminateWait = time.Duration(res.SupervisorTerminateWaitMS) * time.Millisecond
+	}
 }

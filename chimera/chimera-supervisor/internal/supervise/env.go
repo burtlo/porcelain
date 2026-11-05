@@ -25,7 +25,7 @@ func WrapperArgs(base []string) []string {
 	return append([]string(nil), base...)
 }
 
-// appendBackendLogLevel adds -log-level when gateway.yaml supplies a non-empty backend level.
+// appendBackendLogLevel adds -log-level when chimera.yaml supplies a non-empty backend level.
 func appendBackendLogLevel(args []string, level string) []string {
 	level = strings.TrimSpace(level)
 	if level == "" {

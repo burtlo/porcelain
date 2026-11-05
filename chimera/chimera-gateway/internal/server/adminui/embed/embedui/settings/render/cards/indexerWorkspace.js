@@ -19,6 +19,7 @@ globalThis.ChimeraSettings.Render.Cards.mountFeedLogIndexerWorkspace = function 
   var RECENT_CARD_STATUS_N = ctx.RECENT_CARD_STATUS_N;
   var sliceRecent = ctx.sliceRecent;
   var buildManagedWorkspacePathsEditHtml = ctx.buildManagedWorkspacePathsEditHtml;
+  var buildManagedWorkspacePolicyEditHtml = ctx.buildManagedWorkspacePolicyEditHtml;
   var buildManagedWorkspaceToolbarHtml = ctx.buildManagedWorkspaceToolbarHtml;
   var collectIndexerRunMeta = ctx.collectIndexerRunMeta;
   var indexerBuildCardSubtitle = ctx.indexerBuildCardSubtitle;
@@ -784,6 +785,10 @@ globalThis.ChimeraSettings.Render.Cards.mountFeedLogIndexerWorkspace = function 
     if (isEdit && typeof buildManagedWorkspacePathsEditHtml === "function") {
       pathsBlockHtml = buildManagedWorkspacePathsEditHtml(wsNum, ctx.workspaceManagedStaging.paths);
     }
+    var policyBlockHtml =
+      isEdit && typeof buildManagedWorkspacePolicyEditHtml === "function"
+        ? buildManagedWorkspacePolicyEditHtml(wsNum, ws)
+        : "";
     var configureBtn =
       typeof buildManagedWorkspaceToolbarHtml === "function"
         ? buildManagedWorkspaceToolbarHtml(wsNum, isEdit, titleText)
@@ -796,6 +801,7 @@ globalThis.ChimeraSettings.Render.Cards.mountFeedLogIndexerWorkspace = function 
       recentOpts: { omitWhenEmpty: true },
       pathsBlockHtml: pathsBlockHtml,
       configureBtnHtml: configureBtn,
+      extraAfterSummaryHtml: policyBlockHtml,
       pathsUiPart: "indexer-operator-workspace.paths",
       scopedEvlogUiPart: "indexer-operator-workspace.scoped-evlog"
     })

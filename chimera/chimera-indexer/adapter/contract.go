@@ -9,6 +9,11 @@ import (
 // FileConfig is the on-disk YAML schema for indexer configuration.
 type FileConfig = idx.FileConfig
 
+// MergeFileConfig merges overlay onto base (later wins for overlapping keys).
+func MergeFileConfig(base, overlay FileConfig) FileConfig {
+	return idx.MergeFileConfig(base, overlay)
+}
+
 const (
 	// EnvGatewayURL is the preferred environment variable for gateway base URL.
 	EnvGatewayURL = idx.EnvGatewayURL

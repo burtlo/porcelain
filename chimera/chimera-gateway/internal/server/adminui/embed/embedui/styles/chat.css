@@ -439,6 +439,52 @@ html[data-theme="design-01"] .chat-viewport::-webkit-scrollbar-thumb {
   border-radius: 0 0 var(--chat-card-radius) var(--chat-card-radius);
 }
 
+.chat-turn-details {
+  margin-top: 0.25rem;
+  border: 1px solid var(--embed-border-medium);
+  border-radius: 8px;
+  background: var(--embed-surface-container-low, #f4f3f0);
+}
+.chat-turn-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--embed-text-secondary);
+}
+.chat-turn-details > summary::-webkit-details-marker { display: none; }
+.chat-turn-details__lead { display: inline-flex; }
+.chat-turn-details__lead .sg-op-chev-icon {
+  font-size: 1.05rem;
+  color: var(--embed-color-outline-variant);
+  transition: transform 0.15s ease;
+}
+.chat-turn-details[open] .sg-op-chev-icon { transform: rotate(90deg); }
+.chat-turn-details__body {
+  padding: 0 0.55rem 0.55rem;
+  border-top: 1px solid var(--embed-border-medium);
+}
+.chat-turn-details__chips,
+.chat-turn-details__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+.chat-turn-details__chip {
+  padding: 0.12rem 0.38rem;
+  border: 1px solid var(--embed-border-medium);
+  border-radius: 999px;
+  background: var(--embed-surface-elevated, #fff);
+  font-size: 0.72rem;
+  color: var(--embed-text-secondary);
+}
+.chat-turn-details__chip span { color: var(--embed-text-muted); }
+
 .chat-msg__copy-footer {
   display: flex;
   align-items: center;
@@ -765,7 +811,6 @@ html[data-theme="design-01"] .chat-viewport::-webkit-scrollbar-thumb {
   font-size: 0.85rem;
   line-height: 1;
   color: var(--embed-text-faint);
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
 }
 
 .material-symbols-outlined {
@@ -780,7 +825,6 @@ html[data-theme="design-01"] .chat-viewport::-webkit-scrollbar-thumb {
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   -webkit-font-smoothing: antialiased;
 }
 

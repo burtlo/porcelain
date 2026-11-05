@@ -27,7 +27,7 @@ func TestBootstrapMode_missingTokensFile(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"m"}, "")
 	routePath := filepath.Join(dir, "routing-policy.yaml")
 	if err := os.WriteFile(routePath, []byte("rules: []\n"), 0o644); err != nil {
@@ -52,13 +52,13 @@ func TestNewBootstrapMux_setupCompleteThenNotBootstrap(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"m"}, "")
 	routePath := filepath.Join(dir, "routing-policy.yaml")
 	if err := os.WriteFile(routePath, []byte("rules: []\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv(naming.EnvGatewayConfigTarget, gwPath)
+	t.Setenv(naming.EnvChimeraConfigTarget, gwPath)
 
 	rt := mustRuntime(t, gwPath)
 	h := NewBootstrapMux(rt, testLog(), &StatusOverlay{EffectiveListen: "127.0.0.1:9"})
@@ -113,7 +113,7 @@ func TestNewBootstrapMux_setupTokenThenNotBootstrap(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"m"}, "")
 	routePath := filepath.Join(dir, "routing-policy.yaml")
 	if err := os.WriteFile(routePath, []byte("rules: []\n"), 0o644); err != nil {

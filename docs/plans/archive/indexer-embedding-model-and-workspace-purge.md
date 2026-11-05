@@ -12,7 +12,7 @@
 
 ## At a glance
 
-Operators need to **choose the embedding model** used for ingest and retrieval from the **live broker catalog**, not only via hand-edited `gateway.yaml`. The **indexer / RAG service card** on `/ui/settings` should expose a catalog combobox, persist the choice through a gateway API, and show a clear **re-embed warning** when the model changes. When an operator **deletes a workspace**, the gateway should **drop the scoped vector collection** so orphaned vectors do not linger in Qdrant.
+Operators need to **choose the embedding model** used for ingest and retrieval from the **live broker catalog**, not only via hand-edited `chimera.yaml`. The **indexer / RAG service card** on `/ui/settings` should expose a catalog combobox, persist the choice through a gateway API, and show a clear **re-embed warning** when the model changes. When an operator **deletes a workspace**, the gateway should **drop the scoped vector collection** so orphaned vectors do not linger in Qdrant.
 
 | Phase                                                                                                  | Outcome                                                                                                          | Status |
 |--------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|--------|
@@ -25,7 +25,7 @@ Operators need to **choose the embedding model** used for ingest and retrieval f
 
 ## Background
 
-**Problem.** Today `rag.embedding.model` defaults to `ollama/nomic-embed-text:latest` in `gateway.yaml`. The gateway exposes the current value read-only via `GET /v1/indexer/config` and storage health flags `embed_model_not_in_catalog`, but operators cannot change it from `/ui/settings`. The v0.3 setup wizard step 5 assumes an embedding combobox that has no write path.
+**Problem.** Today `rag.embedding.model` defaults to `ollama/nomic-embed-text:latest` in `chimera.yaml`. The gateway exposes the current value read-only via `GET /v1/indexer/config` and storage health flags `embed_model_not_in_catalog`, but operators cannot change it from `/ui/settings`. The v0.3 setup wizard step 5 assumes an embedding combobox that has no write path.
 
 **Workspace delete.** Deleting a workspace row stops the indexer watch after reload but **does not purge** vectors ([`indexer-workspaces.md`](../../features/indexer-workspaces.md) known gap). Operators expect “delete workspace” to clear searchable corpus for that scope.
 
@@ -42,7 +42,7 @@ Operators need to **choose the embedding model** used for ingest and retrieval f
 
 - `GET /api/ui/rag/embedding` — current model id, dimension, catalog presence (`ok` / `embed_model_not_in_catalog`), and catalog-derived **candidate list** (all model ids from live chimera-broker snapshot, or full merged catalog per product decision).
 - `PUT /api/ui/rag/embedding` — body `{ "model": "provider/model-id" }`; validate non-empty id and presence in live catalog (or allow with warning if catalog poll stale — document behavior).
-- Patch `gateway.yaml` `rag.embedding.model` (and `rag.embedding.dim` when catalog or static map supplies dimension); `Runtime.Sync()`; RAG embedder reload.
+- Patch `chimera.yaml` `rag.embedding.model` (and `rag.embedding.dim` when catalog or static map supplies dimension); `Runtime.Sync()`; RAG embedder reload.
 - Unit tests: invalid model rejected; valid model persists and appears on `GET /v1/indexer/config`.
 - Extend `config` package with `PatchGatewayYAMLBytesWithEmbeddingModel` (mirror fallback-chain patch pattern).
 

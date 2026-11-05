@@ -109,7 +109,7 @@ var gatewayIndexTmpl = template.Must(template.New("gatewayIndex").Parse(`<!DOCTY
   <h2>Version</h2>
   <dl>
     <dt>Gateway version</dt><dd><code>{{.Semver}}</code></dd>
-    <dt>Virtual model</dt><dd><code>{{.VirtualModel}}</code></dd>
+    <dt>Assistant</dt><dd><code>{{.Assistant}}</code></dd>
   </dl>
 
   <h2>Services</h2>
@@ -129,10 +129,12 @@ var gatewayIndexTmpl = template.Must(template.New("gatewayIndex").Parse(`<!DOCTY
     <dt>Gateway tokens</dt><dd>{{.TokensCount}} configured</dd>
     <dt>Metrics</dt><dd>{{if .MetricsEnabled}}enabled{{else}}disabled{{end}}</dd>
     <dt>Broker model providers</dt><dd>{{.Providers}}</dd>
-    <dt>Models available</dt><dd>{{.ModelCount}} <span class="muted">(merged list: virtual + upstream)</span></dd>
+    <dt>Models available</dt><dd>{{.ModelCount}} <span class="muted">(merged list: assistant + upstream)</span></dd>
   </dl>
 </body>
 </html>`))
+
+//go:generate go run ../../../../internal/docgen/routes/cmd
 
 // NewMux builds the v0.1 HTTP surface (src/server.ts parity). overlay configures GET /status;
 // pass nil in tests; production passes listen address and optional supervisor info.
@@ -182,10 +184,10 @@ func NewMux(rt *Runtime, log *slog.Logger, overlay *StatusOverlay, ui *UIOptions
 			}
 		}
 
-		idxScope := res.IndexerSupervisedEnabled && (res.RAG.Enabled || res.IndexerSupervisedStartWhenRAGDisabled)
+		idxScope := res.IndexerEnabled
 		idxConfig := "disabled"
 		idxWorker := "—"
-		if res.IndexerSupervisedEnabled {
+		if res.IndexerEnabled {
 			idxConfig = "enabled"
 			if !idxScope {
 				idxWorker = "not running (out of scope)"
@@ -221,24 +223,24 @@ func NewMux(rt *Runtime, log *slog.Logger, overlay *StatusOverlay, ui *UIOptions
 		}
 
 		data := struct {
-			Semver, VirtualModel string
-			GatewayURL           string
-			BrokerURL            string
-			BrokerOK             bool
-			BrokerClass          string
-			VectorstoreURL       string
-			VectorstoreState     string
-			VectorstoreClass     string
-			IndexerConfig        string
-			IndexerWorker        string
-			IndexerWorkerClass   string
-			TokensCount          int
-			MetricsEnabled       bool
-			Providers            string
-			ModelCount           string
+			Semver, Assistant  string
+			GatewayURL         string
+			BrokerURL          string
+			BrokerOK           bool
+			BrokerClass        string
+			VectorstoreURL     string
+			VectorstoreState   string
+			VectorstoreClass   string
+			IndexerConfig      string
+			IndexerWorker      string
+			IndexerWorkerClass string
+			TokensCount        int
+			MetricsEnabled     bool
+			Providers          string
+			ModelCount         string
 		}{
 			Semver:             res.Semver,
-			VirtualModel:       rt.PrimaryVirtualModelID(),
+			Assistant:          rt.PrimaryAssistantID(),
 			GatewayURL:         gwURL,
 			BrokerURL:          chimeraBrokerURL,
 			BrokerOK:           chimeraBrokerOK,
@@ -459,14 +461,14 @@ func ensureOpenAIModelListItems(data []any) {
 	}
 }
 
-// writeMergedModelsResponse lists upstream GET /v1/models, prepends virtual models, and writes OpenAI-style JSON.
+// writeMergedModelsResponse lists upstream GET /v1/models, prepends assistants, and writes OpenAI-style JSON.
 func writeMergedModelsResponse(w http.ResponseWriter, ctx context.Context, rt *Runtime, res *config.Resolved, principalID, apiKey string, timeout time.Duration, log *slog.Logger) {
 	w.Header().Set("Content-Type", "application/json")
 	if apiKey == "" {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": map[string]any{
-				"message": "Missing chimera-broker API key (set " + res.UpstreamAPIKeyEnv + " or broker.api_key in " + naming.GatewayConfigFileTarget + ")",
+				"message": "Missing chimera-broker API key (set " + res.UpstreamAPIKeyEnv + " or broker.api_key in " + naming.ChimeraConfigFileTarget + ")",
 				"type":    "gateway_config",
 			},
 		})
@@ -501,7 +503,7 @@ func writeMergedModelsResponse(w http.ResponseWriter, ctx context.Context, rt *R
 	}
 	ensureOpenAIModelListItems(data)
 	data = catalog.FilterOpenAIModelDataByAvailability(data, rt.ProviderModelAvailability(principalID))
-	out := prependVirtualModelsToCatalog(data, rt, principalID)
+	out := prependAssistantsToCatalog(data, rt, principalID)
 	_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": out})
 }
 
@@ -622,7 +624,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": map[string]any{
-				"message": "Missing chimera-broker API key (set " + res.UpstreamAPIKeyEnv + " or broker.api_key in " + naming.GatewayConfigFileTarget + ")",
+				"message": "Missing chimera-broker API key (set " + res.UpstreamAPIKeyEnv + " or broker.api_key in " + naming.ChimeraConfigFileTarget + ")",
 				"type":    "gateway_config",
 			},
 		})
@@ -660,13 +662,9 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 			headerToolThresh = v
 		}
 	}
-	rtDur := time.Duration(res.ChatTimeoutMs) * time.Millisecond
-	if rtDur > 60*time.Second {
-		rtDur = 60 * time.Second
-	}
-	if rtDur < 5*time.Second {
-		rtDur = 5 * time.Second
-	}
+	// Same budget as direct upstream chat: gateway.timeouts.chat_ms (default 300s).
+	// Applied per harness upstream call (primary stream, summarize, evaluator, tools).
+	rtDur := chatTimeout(res)
 	headerCID := ingest.OptionalConversationIDFromHeader(r)
 	proj := ingest.ResolveProject(r.Header.Get(ingest.HeaderProject), res.RAG.DefaultProject)
 	flav := ingest.ResolveFlavor(r.Header.Get(ingest.HeaderFlavor), res.RAG.DefaultFlavor)
@@ -682,6 +680,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 
 	routeLog := chatRouteLogger(log, rid, cid, sess.TenantID, turnIdx)
 	w.Header().Set(headerConversationID, cid)
+	w.Header().Set(naming.HeaderTurnIndexTarget, strconv.Itoa(turnIdx))
 
 	if routeLog != nil {
 		msgCount := conversationwitness.RequestMessageCount(raw)
@@ -709,7 +708,7 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		histRec.Attach(&chatOpts)
 	}
 
-	vmCtx, vmStatus, vmErrBody := resolveVirtualModelChat(rt, clientModel, sess.TenantID)
+	vmCtx, vmStatus, vmErrBody := resolveAssistantChat(rt, clientModel, sess.TenantID)
 	if vmErrBody != nil {
 		if histRec != nil {
 			histRec.PersistGatewayError(vmStatus, vmErrBody)
@@ -720,8 +719,12 @@ func handleV1Chat(w http.ResponseWriter, r *http.Request, rt *Runtime, log *slog
 		return
 	}
 	if vmCtx != nil {
-		if handleVirtualModelChat(ctx, w, rt, res, vmCtx, raw, stream, skipToolRouter, headerToolThresh, routeLog,
-			cid, turnIdx, rid, sess.TenantID, proj, flav, apiKey, rtDur, chatOpts, histRec) {
+		var workspaceRowID int64
+		if wid := optionalWorkspaceRowID(r); wid != nil {
+			workspaceRowID = *wid
+		}
+		if handleAssistantChat(ctx, w, rt, res, vmCtx, raw, stream, skipToolRouter, headerToolThresh, routeLog,
+			cid, turnIdx, rid, sess.TenantID, proj, flav, workspaceRowID, apiKey, rtDur, chatOpts, histRec) {
 			return
 		}
 	}

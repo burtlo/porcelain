@@ -355,6 +355,36 @@ func TestLogsDerive_conversationCardModel_toolsChipCounts(t *testing.T) {
 	}
 }
 
+func TestLogsDerive_conversationHarnessStagesByTurn(t *testing.T) {
+	vm := goja.New()
+	evalJS(t, vm, settingsUIPath(t, "testing", "loader.js"))
+	evalJS(t, vm, settingsUIPath(t, "derive", "conversationCardModel.js"))
+
+	derive := vm.Get("ChimeraSettings").ToObject(vm).Get("Derive").ToObject(vm)
+	fn, ok := goja.AssertFunction(derive.Get("conversationHarnessStagesByTurn"))
+	if !ok {
+		t.Fatal("missing conversationHarnessStagesByTurn")
+	}
+	events := []map[string]any{
+		{"seq": 1, "parsed": map[string]any{"rawFlat": map[string]any{"msg": "harness.stage.started", "turn_index": 2, "stage": "retrieval"}}},
+		{"seq": 2, "parsed": map[string]any{"rawFlat": map[string]any{"msg": "harness.stage.completed", "turn_index": 2, "stage": "retrieval"}}},
+		{"seq": 3, "parsed": map[string]any{"rawFlat": map[string]any{"msg": "harness.stage.completed", "turn_index": 2, "stage": "evaluator"}}},
+	}
+	v, err := fn(goja.Undefined(), vm.ToValue(events), goja.Undefined())
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := v.Export().([]any)
+	if len(groups) != 1 {
+		t.Fatalf("groups=%v want one", groups)
+	}
+	group := groups[0].(map[string]any)
+	stages := group["stages"].([]any)
+	if len(stages) != 2 || stages[0].(map[string]any)["status"] != "completed" {
+		t.Fatalf("stages=%v want completed retrieval and evaluator", stages)
+	}
+}
+
 func TestLogsDerive_buildConversationCardModel_witnessFlags(t *testing.T) {
 	vm := goja.New()
 	evalJS(t, vm, settingsUIPath(t, "testing", "loader.js"))
@@ -1573,7 +1603,7 @@ func TestLogsDerive_gatewayCardModel_kvCountersHideRow(t *testing.T) {
 		}},
 		{"parsed": map[string]any{"rawFlat": map[string]any{
 			"msg": "gateway.startup.listening", "addr": ":8080", "broker": "http://bifrost", "chimera_broker_data": "/data/b",
-			"vectorstore_supervised": true, "indexer_supervised": true, "config": "/x/gateway.yaml",
+			"vectorstore_supervised": true, "indexer_supervised": true, "config": "/x/chimera.yaml",
 		}}},
 		{"parsed": map[string]any{"rawFlat": map[string]any{"msg": "gateway.auth.reloaded", "count": 2}}},
 		{"parsed": map[string]any{"rawFlat": map[string]any{"msg": "routing.policy.reloaded", "rules": 5}}},

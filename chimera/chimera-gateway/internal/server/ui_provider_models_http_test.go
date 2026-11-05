@@ -42,7 +42,7 @@ func TestUIProviderModels_endToEnd(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"groq/free"}, "")
 	ftPath := filepath.Join(dir, "provider-free-tier.yaml")
 	if err := os.WriteFile(ftPath, []byte("format_version: 1\nmodels:\n  - groq/free\n"), 0o644); err != nil {
@@ -188,7 +188,7 @@ func TestUIProviderModels_ollamaApplyFreeTierNoOp(t *testing.T) {
 	t.Cleanup(chimeraBroker.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, chimeraBroker.URL, []string{"ollama/llama3"}, "")
 	tokPath := filepath.Join(dir, "api-keys.yaml")
 	writeTokens(t, tokPath, "gw-ollama-models", "tenant-a")

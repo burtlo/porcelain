@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/lynn/porcelain/chimera/internal/config"
+	"github.com/lynn/porcelain/internal/naming"
 )
 
 var nonSlugRE = regexp.MustCompile(`[^a-z0-9]+`)
@@ -41,15 +42,15 @@ func seedRoutingRuleCatalog(ctx context.Context, s *Store) error {
 		"Route long user turns via min_message_chars")
 }
 
-// BootstrapVirtualModels seeds operator SQLite on first open. Legacy gateway.yaml routing
-// import was removed; operators create virtual models in settings (or tests seed rows explicitly).
-func BootstrapVirtualModels(ctx context.Context, s *Store, res *config.Resolved, log *slog.Logger) error {
+// BootstrapAssistants seeds operator SQLite on first open. Legacy file-based routing
+// import was removed; operators create assistants in settings (or tests seed rows explicitly).
+func BootstrapAssistants(ctx context.Context, s *Store, res *config.Resolved, log *slog.Logger) error {
 	if s == nil {
 		return nil
 	}
-	has, err := s.HasVirtualModels(ctx)
+	has, err := s.HasAssistants(ctx)
 	if err != nil {
-		return fmt.Errorf("bootstrap virtual models count: %w", err)
+		return fmt.Errorf("bootstrap assistants count: %w", err)
 	}
 	if has {
 		return nil
@@ -60,8 +61,8 @@ func BootstrapVirtualModels(ctx context.Context, s *Store, res *config.Resolved,
 	return nil
 }
 
-// ChimeraSeed returns a Chimera-<semver> virtual model definition for tests and explicit seeding.
-func ChimeraSeed(semver string, fallbackChain []string, policyDefaultModel string) VirtualModel {
+// ChimeraSeed returns a Chimera-<semver> assistant definition for tests and explicit seeding.
+func ChimeraSeed(semver string, fallbackChain []string, policyDefaultModel string) Assistant {
 	if semver == "" {
 		semver = "0.1.0"
 	}
@@ -78,11 +79,11 @@ rules:
     models:
       - %s
 `, policyDefaultModel, policyDefaultModel)
-	return VirtualModel{
+	return Assistant{
 		ModelID:              "Chimera-" + semver,
 		Name:                 "Chimera",
 		Version:              semver,
-		Description:          "Test Chimera virtual model",
+		Description:          "Test Chimera assistant",
 		Enabled:              true,
 		Visibility:           VisibilityPublic,
 		FallbackChain:        append([]string(nil), fallbackChain...),
@@ -94,8 +95,8 @@ rules:
 	}
 }
 
-// Gemini010Seed returns the Gemini-0.1.0 virtual model definition (gemini provider only).
-func Gemini010Seed(geminiModels []string) VirtualModel {
+// Gemini010Seed returns the Gemini-0.1.0 assistant definition (gemini provider only).
+func Gemini010Seed(geminiModels []string) Assistant {
 	if len(geminiModels) == 0 {
 		geminiModels = []string{
 			"gemini/gemini-2.5-flash",
@@ -115,11 +116,11 @@ rules:
     models:
       - %s
 `, defaultModel, defaultModel, defaultModel)
-	return VirtualModel{
+	return Assistant{
 		ModelID:              "Gemini-0.1.0",
 		Name:                 "Gemini",
 		Version:              "0.1.0",
-		Description:          "Gemini-only virtual model; routes exclusively through gemini provider models",
+		Description:          "Gemini-only assistant; routes exclusively through gemini provider models",
 		Enabled:              true,
 		Visibility:           VisibilityPublic,
 		FallbackChain:        append([]string(nil), geminiModels...),
@@ -131,12 +132,12 @@ rules:
 	}
 }
 
-// EnsureGeminiVirtualModel creates Gemini-0.1.0 when absent (used after bootstrap in dev/tests).
-func EnsureGeminiVirtualModel(ctx context.Context, s *Store, geminiModels []string, log *slog.Logger) error {
+// EnsureGeminiAssistant creates Gemini-0.1.0 when absent (used after bootstrap in dev/tests).
+func EnsureGeminiAssistant(ctx context.Context, s *Store, geminiModels []string, log *slog.Logger) error {
 	if s == nil {
 		return nil
 	}
-	existing, err := s.GetVirtualModelByModelID(ctx, "Gemini-0.1.0")
+	existing, err := s.GetAssistantByModelID(ctx, "Gemini-0.1.0")
 	if err != nil {
 		return err
 	}
@@ -144,11 +145,11 @@ func EnsureGeminiVirtualModel(ctx context.Context, s *Store, geminiModels []stri
 		return nil
 	}
 	vm := Gemini010Seed(geminiModels)
-	if _, err := s.InsertVirtualModelFull(ctx, vm); err != nil {
-		return fmt.Errorf("seed gemini virtual model: %w", err)
+	if _, err := s.InsertAssistantFull(ctx, vm); err != nil {
+		return fmt.Errorf("seed gemini assistant: %w", err)
 	}
 	if log != nil {
-		log.Info("gemini virtual model seeded", "msg", "gateway.virtual_model.gemini_seeded", "model_id", vm.ModelID)
+		log.Info("gemini assistant seeded", "msg", naming.MsgGatewayAssistantGeminiSeeded, "assistant_id", vm.ModelID)
 	}
 	return nil
 }

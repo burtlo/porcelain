@@ -24,9 +24,9 @@ func GenerateUpstreamAPIKey() (string, error) {
 	return hex.EncodeToString(b[:]), nil
 }
 
-// EnsureGeneratedUpstreamAPIKey writes broker.api_key to gateway.yaml when the env var is unset
+// EnsureGeneratedUpstreamAPIKey writes broker.api_key to chimera.yaml when the env var is unset
 // and the loaded config has no upstream API key. Otherwise returns res unchanged.
-func EnsureGeneratedUpstreamAPIKey(gatewayPath string, res *Resolved, log *slog.Logger) (*Resolved, error) {
+func EnsureGeneratedUpstreamAPIKey(chimeraPath string, res *Resolved, log *slog.Logger) (*Resolved, error) {
 	if res == nil {
 		return nil, fmt.Errorf("nil resolved config")
 	}
@@ -40,36 +40,36 @@ func EnsureGeneratedUpstreamAPIKey(gatewayPath string, res *Resolved, log *slog.
 	if err != nil {
 		return nil, fmt.Errorf("generate upstream api key: %w", err)
 	}
-	if err := writeUpstreamAPIKeyYAML(gatewayPath, key); err != nil {
+	if err := writeUpstreamAPIKeyYAML(chimeraPath, key); err != nil {
 		return nil, err
 	}
 	if log != nil {
-		log.Info("wrote auto-generated broker.api_key to gateway.yaml", "msg", "gateway.auth.upstream_api_key.autogen", "path", gatewayPath)
+		log.Info("wrote auto-generated broker.api_key to chimera.yaml", "msg", "gateway.auth.upstream_api_key.autogen", "path", chimeraPath)
 	}
 	out := CloneResolved(res)
 	out.UpstreamAPIKey = key
 	return out, nil
 }
 
-func writeUpstreamAPIKeyYAML(gatewayPath, apiKey string) error {
-	raw, err := os.ReadFile(gatewayPath)
+func writeUpstreamAPIKeyYAML(chimeraPath, apiKey string) error {
+	raw, err := os.ReadFile(chimeraPath)
 	if err != nil {
-		return fmt.Errorf("read gateway yaml: %w", err)
+		return fmt.Errorf("read chimera yaml: %w", err)
 	}
 	var root yaml.Node
 	if err := yaml.Unmarshal(raw, &root); err != nil {
-		return fmt.Errorf("parse gateway yaml: %w", err)
+		return fmt.Errorf("parse chimera yaml: %w", err)
 	}
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
-		return fmt.Errorf("gateway yaml: expected document root")
+		return fmt.Errorf("chimera yaml: expected document root")
 	}
 	docMap := root.Content[0]
 	if docMap.Kind != yaml.MappingNode {
-		return fmt.Errorf("gateway yaml: expected mapping at document root")
+		return fmt.Errorf("chimera yaml: expected mapping at document root")
 	}
 	upNode := mappingGetOrCreateChildMapping(docMap, "broker")
 	if upNode == nil {
-		return fmt.Errorf("gateway yaml: broker block")
+		return fmt.Errorf("chimera yaml: broker block")
 	}
 	setOrReplaceMappingScalar(upNode, upstreamAPIKeyYAML, apiKey)
 	var buf bytes.Buffer
@@ -77,17 +77,17 @@ func writeUpstreamAPIKeyYAML(gatewayPath, apiKey string) error {
 	enc.SetIndent(2)
 	if err := enc.Encode(&root); err != nil {
 		_ = enc.Close()
-		return fmt.Errorf("encode gateway yaml: %w", err)
+		return fmt.Errorf("encode chimera yaml: %w", err)
 	}
 	if err := enc.Close(); err != nil {
-		return fmt.Errorf("encode gateway yaml: %w", err)
+		return fmt.Errorf("encode chimera yaml: %w", err)
 	}
 	var mode fs.FileMode = 0o644
-	if st, err := os.Stat(gatewayPath); err == nil {
+	if st, err := os.Stat(chimeraPath); err == nil {
 		mode = st.Mode() & fs.ModePerm
 	}
-	if err := os.WriteFile(gatewayPath, buf.Bytes(), mode); err != nil {
-		return fmt.Errorf("write gateway yaml: %w", err)
+	if err := os.WriteFile(chimeraPath, buf.Bytes(), mode); err != nil {
+		return fmt.Errorf("write chimera yaml: %w", err)
 	}
 	return nil
 }

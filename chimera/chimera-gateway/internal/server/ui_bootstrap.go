@@ -137,7 +137,7 @@ func handleBootstrapStatus(w http.ResponseWriter, r *http.Request, rt *Runtime, 
 		},
 		"gateway": map[string]any{
 			"listen":          listen,
-			"virtual_model":   rt.PrimaryVirtualModelID(),
+			"assistant_id":    rt.PrimaryAssistantID(),
 			"semver":          res.Semver,
 			"broker_base_url": res.UpstreamBaseURL,
 		},
@@ -235,7 +235,7 @@ func handleSetupCompletePOST(rt *Runtime, log *slog.Logger) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		gatewayPath, err := config.ResolveGatewayConfigPath()
+		gatewayPath, err := config.ResolveChimeraConfigPath()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -244,10 +244,10 @@ func handleSetupCompletePOST(rt *Runtime, log *slog.Logger) http.HandlerFunc {
 			AccessMode: body.AccessMode,
 			LoginMode:  body.LoginMode,
 		}, firstsetup.Options{
-			TokensPath:  tokStore.Path(),
-			GatewayPath: gatewayPath,
-			DotenvPath:  ".env",
-			EnvKey:      naming.EnvGatewayTokenTarget,
+			TokensPath:      tokStore.Path(),
+			ChimeraYAMLPath: gatewayPath,
+			DotenvPath:      ".env",
+			EnvKey:          naming.EnvGatewayTokenTarget,
 		})
 		if err != nil {
 			if log != nil {

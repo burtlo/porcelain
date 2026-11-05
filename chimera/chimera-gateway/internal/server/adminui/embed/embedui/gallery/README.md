@@ -14,7 +14,9 @@ Do not add duplicate assets under `settings/gallery/` — this directory is the 
 | `/ui/assets/gallery/gallery-card-fixtures.js` | Renders production card HTML into `#gallery-fixture-*` mount points |
 | `/ui/assets/gallery/gallery-parts.js` | “Show part names” toggle + `?parts=1` (sets `body.gallery-show-parts`) |
 
-**Card parity:** `gallery-card-fixtures.js` loads the same `settings/render/cards/*` and `shared/*` modules as `/ui/settings`, then fills fixture containers for gateway overview, providers, workspace draft, managed workspace, virtual model (per-VM routing), and indexer-stale cards.
+**Card parity:** `gallery-card-fixtures.js` loads the same `settings/render/cards/*`, `shared/*`, and chat message renderer modules as production, then fills fixture containers for gateway overview, providers, workspace draft, managed workspace, assistant (per-assistant routing), indexer-stale cards, harness conversation timelines, and collapsed/expanded chat Turn details.
+
+**Harness / assistant train:** UI-bearing phases under [`docs/plans/assistant-turn-harness.md`](../../../../../../../../docs/plans/assistant-turn-harness.md) (gallery contract) must extend this page with multi-state fixtures so reviewers can compare configuration states without live SQLite or chat. Add mounts and nav anchors as each child plan ships; do not leave new harness controls live-only.
 
 **Part overlay:** Enable **Show part names** on the gallery toolbar (or open with `?parts=1`). Labels come from production `data-ui-part` attributes documented in [`../settings/card-parts-registry.md`](../settings/card-parts-registry.md). Overlay styles live in `gallery-shell.css` only.
 

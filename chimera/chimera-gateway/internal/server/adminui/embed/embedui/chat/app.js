@@ -181,6 +181,28 @@
       });
   }
 
+  function messageById(id) {
+    for (var i = 0; i < state.messages.length; i++) {
+      if (state.messages[i].id === id) return state.messages[i];
+    }
+    return null;
+  }
+
+  function copyDebugBundle(msgId) {
+    var Dbg = globalThis.ChimeraChat && ChimeraChat.DebugBundle;
+    if (!Dbg || typeof Dbg.formatTurnDebugBundle !== "function") return;
+    var msg = messageById(msgId);
+    if (!msg) return;
+    copyText(
+      Dbg.formatTurnDebugBundle(msg, {
+        messages: state.messages,
+        conversationId: state.conversationId,
+        selectedModel: state.selectedModel,
+        workspace: selectedWorkspace()
+      })
+    );
+  }
+
   function copyText(text) {
     var t = String(text || "");
     if (!t) return false;
@@ -344,6 +366,13 @@
         if (meta.conversationId) state.conversationId = meta.conversationId;
         assistant.upstreamModel = meta.upstreamModel || state.selectedModel;
         assistant.ragHits = meta.ragHits;
+        assistant.requestId = meta.requestId || "";
+        assistant.turnIndex = meta.turnIndex;
+        assistant.conversationId = meta.conversationId || state.conversationId;
+        if (meta.harnessSummary) assistant.harnessSummary = meta.harnessSummary;
+        if (!assistant.requestId && meta.harnessSummary && meta.harnessSummary.request_id) {
+          assistant.requestId = String(meta.harnessSummary.request_id);
+        }
         return Stream.handleResponse(res, function (delta) {
           assistant.content += delta;
           paintAssistantDelta(assistant);
@@ -392,7 +421,8 @@
           State.createMessage("assistant", t.content || "", {
             selectedModel: t.selected_model || "",
             upstreamModel: t.resolved_model || t.selected_model || "",
-            ragHits: t.ragHits || null
+            ragHits: t.ragHits || null,
+            harnessSummary: t.harness_summary || t.harnessSummary || null
           })
         );
       } else if (role === "error") {
@@ -501,6 +531,11 @@
     viewport.addEventListener("click", function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
+      var debugBtn = t.closest(".chat-msg__debug-btn");
+      if (debugBtn) {
+        copyDebugBundle(debugBtn.getAttribute("data-debug-msg-id") || "");
+        return;
+      }
       var copyBtn = t.closest(".chat-msg__copy-btn");
       if (copyBtn) {
         copyText(copyBtn.getAttribute("data-copy-text") || "");

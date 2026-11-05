@@ -81,7 +81,7 @@ func TestBootstrapSetup_servesSharedCSS(t *testing.T) {
 	t.Cleanup(up.Close)
 
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 	writeGateway(t, gwPath, up.URL, []string{"m"}, "")
 	routePath := filepath.Join(dir, "routing-policy.yaml")
 	if err := os.WriteFile(routePath, []byte("rules: []\n"), 0o644); err != nil {

@@ -134,3 +134,26 @@ func TestEntryURL_Bootstrap(t *testing.T) {
 		t.Fatalf("want setup URL, got %s", got)
 	}
 }
+
+func TestRequestShutdown_Accepted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/shutdown" {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+	if !RequestShutdown(srv.URL) {
+		t.Fatal("expected RequestShutdown to succeed")
+	}
+}
+
+func TestRequestShutdown_Unavailable(t *testing.T) {
+	if RequestShutdown("") {
+		t.Fatal("empty URL should fail")
+	}
+	if RequestShutdown("http://127.0.0.1:1") {
+		t.Fatal("unreachable control plane should fail")
+	}
+}

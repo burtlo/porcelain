@@ -83,12 +83,12 @@ func collectFallbackViolations(rt *Runtime, res *config.Resolved) map[string]fal
 		chain  []string
 	}
 	var chains []chainRef
-	if vmReg := rt.VirtualModels(); vmReg != nil {
+	if vmReg := rt.Assistants(); vmReg != nil {
 		for _, vm := range vmReg.AllEnabled() {
 			if vm == nil || len(vm.FallbackChain) == 0 {
 				continue
 			}
-			src := "virtual_model:" + vm.ModelID
+			src := "assistant:" + vm.ModelID
 			chains = append(chains, chainRef{source: src, chain: vm.FallbackChain})
 		}
 	}

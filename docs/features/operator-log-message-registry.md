@@ -6,7 +6,7 @@
 | **Areas** | Gateway logs UI, structured log emission, indexer/broker/vectorstore copy |
 | **Status** | `current` |
 | **Introduced** | 2026-05 operator copy refactor |
-| **Originated from** | [`plans/archive/operator-message-registry.md`](../plans/archive/operator-message-registry.md) |
+| **Originated from** | [`plans/operator-message-registry.md`](../plans/archive/operator-message-registry.md) |
 | **Related features** | [Operator settings UI](operator-settings-ui.md), [Indexer health and operator logs](indexer-health-and-operator-logs.md) |
 | **Depends on** | `messages.yaml`, go generate pipeline, settings embed renderers |
 | **Last updated** | See git history |
@@ -52,6 +52,7 @@ Structured log lines use stable **`msg` slugs** in Go (`slog` fields). The **ope
 |---------|--------|
 | Source | `internal/operatorcopy/messages.yaml` |
 | Generated JS | `operator_copy.js` — `Slug`, `operatorMessage`, `inferShapeForFlat`, `metricsCounterForFlat` |
+| Agent slug index | [`docs/generated/log-slug-index.md`](../generated/log-slug-index.md) (generated from YAML) |
 | Render entry | `settings/render/operatorMessage.js`, `operatorMessageServices.js`, `operatorMessageIndexer.js` |
 | Go constants | `internal/naming/log_messages.go` (generated) |
 | Commands | `go generate ./internal/operatorcopy/...`, `make contracts-generate`, `make contracts-check` |
@@ -61,7 +62,7 @@ Structured log lines use stable **`msg` slugs** in Go (`slog` fields). The **ope
 | Concern | Location |
 |---------|------|
 | Schema + load | `internal/operatorcopy/schema.go`, `load.go`, `embed.go` |
-| Codegen | `internal/operatorcopy/genoperatorcopy/`, `genlogmessages/` |
+| Codegen | `internal/operatorcopy/genoperatorcopy/`, `genlogmessages/`, `genslugindex/` |
 | Validate CLI | `internal/operatorcopy/cmd/validate/` |
 | Bootstrap | `internal/operatorcopy/bootstrap_registry.go`, `cmd/bootstrap/` |
 | Inventory | `internal/operatorcopy/cmd/inventory/`, `inventory-report.txt` |
@@ -86,6 +87,6 @@ Manual: edit a slug `summary` in YAML, regenerate, rebuild gateway, confirm sett
 
 ## References
 
-- Plan: [`plans/archive/operator-message-registry.md`](../plans/archive/operator-message-registry.md)
-- Presentation shapes: [`plans/archive/log-presentation-layer.md`](../plans/archive/log-presentation-layer.md)
+- Plan: [`plans/operator-message-registry.md`](../plans/archive/operator-message-registry.md)
+- Presentation shapes: [`plans/log-presentation-layer.md`](../plans/archive/log-presentation-layer.md)
 - Package README: [`internal/operatorcopy/README.md`](../../internal/operatorcopy/README.md)

@@ -14,14 +14,52 @@ import (
 
 // Workspace is one logical indexer workspace (project + flavor) with watched paths.
 type Workspace struct {
-	ID                int64
-	TenantID          string
-	ProjectID         string
-	FlavorID          string
-	ReindexGeneration int64
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	Paths             []WorkspacePath
+	ID                    int64
+	TenantID              string
+	ProjectID             string
+	FlavorID              string
+	Sensitivity           string
+	AllowCloud            bool
+	AllowCloudSummaryOnly bool
+	FileActionPolicy      string
+	ReindexGeneration     int64
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	Paths                 []WorkspacePath
+}
+
+// WorkspacePolicy controls cloud eligibility and file access for a workspace.
+type WorkspacePolicy struct {
+	Sensitivity           string
+	AllowCloud            bool
+	AllowCloudSummaryOnly bool
+	FileActionPolicy      string
+}
+
+func defaultWorkspacePolicy() WorkspacePolicy {
+	return WorkspacePolicy{
+		Sensitivity: "internal", AllowCloud: true, FileActionPolicy: "none",
+	}
+}
+
+func normalizeWorkspacePolicy(policy WorkspacePolicy) (WorkspacePolicy, error) {
+	if policy.Sensitivity == "" {
+		policy.Sensitivity = "internal"
+	}
+	if policy.FileActionPolicy == "" {
+		policy.FileActionPolicy = "none"
+	}
+	switch policy.Sensitivity {
+	case "public", "internal", "private":
+	default:
+		return WorkspacePolicy{}, fmt.Errorf("invalid sensitivity %q", policy.Sensitivity)
+	}
+	switch policy.FileActionPolicy {
+	case "none", "read", "read_write":
+	default:
+		return WorkspacePolicy{}, fmt.Errorf("invalid file_action_policy %q", policy.FileActionPolicy)
+	}
+	return policy, nil
 }
 
 // WorkspacePath is one watched directory belonging to a workspace.
@@ -90,8 +128,27 @@ func (s *Store) ListWorkspaces(ctx context.Context, tenantID string) ([]Workspac
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
 	}
+	seen := make(map[int64]struct{})
+	var out []Workspace
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		batch, err := s.listWorkspacesForTenant(ctx, tenant)
+		if err != nil {
+			return nil, err
+		}
+		for _, w := range batch {
+			if _, dup := seen[w.ID]; dup {
+				continue
+			}
+			seen[w.ID] = struct{}{}
+			out = append(out, w)
+		}
+	}
+	return out, nil
+}
+
+func (s *Store) listWorkspacesForTenant(ctx context.Context, tenantID string) ([]Workspace, error) {
 	rows, err := s.db.QueryContext(ctx, `
-SELECT id, tenant_id, project_id, flavor_id, reindex_generation, created_at, updated_at
+SELECT id, tenant_id, project_id, flavor_id, sensitivity, allow_cloud, allow_cloud_summary_only, file_action_policy, reindex_generation, created_at, updated_at
 FROM workspaces
 WHERE tenant_id = ?
 ORDER BY id`, tenantID)
@@ -103,7 +160,7 @@ ORDER BY id`, tenantID)
 	for rows.Next() {
 		var w Workspace
 		var ca, ua string
-		if err := rows.Scan(&w.ID, &w.TenantID, &w.ProjectID, &w.FlavorID, &w.ReindexGeneration, &ca, &ua); err != nil {
+		if err := rows.Scan(&w.ID, &w.TenantID, &w.ProjectID, &w.FlavorID, &w.Sensitivity, &w.AllowCloud, &w.AllowCloudSummaryOnly, &w.FileActionPolicy, &w.ReindexGeneration, &ca, &ua); err != nil {
 			return nil, err
 		}
 		w.CreatedAt, _ = time.Parse(time.RFC3339Nano, ca)
@@ -152,7 +209,7 @@ ORDER BY id`, workspaceID)
 }
 
 // CreateWorkspace inserts a workspace and paths in one transaction.
-func (s *Store) CreateWorkspace(ctx context.Context, tenantID, projectID, flavorID string, absPaths []string) (*Workspace, error) {
+func (s *Store) CreateWorkspace(ctx context.Context, tenantID, projectID, flavorID string, absPaths []string, policies ...WorkspacePolicy) (*Workspace, error) {
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
 	}
@@ -162,6 +219,14 @@ func (s *Store) CreateWorkspace(ctx context.Context, tenantID, projectID, flavor
 	if len(absPaths) == 0 {
 		return nil, fmt.Errorf("at least one path required")
 	}
+	policy := defaultWorkspacePolicy()
+	if len(policies) > 0 {
+		policy = policies[0]
+	}
+	policy, err := normalizeWorkspacePolicy(policy)
+	if err != nil {
+		return nil, err
+	}
 	now := s.nowRFC3339()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -169,8 +234,8 @@ func (s *Store) CreateWorkspace(ctx context.Context, tenantID, projectID, flavor
 	}
 	defer func() { _ = tx.Rollback() }()
 	res, err := tx.ExecContext(ctx, `
-INSERT INTO workspaces (tenant_id, project_id, flavor_id, created_at, updated_at)
-VALUES (?,?,?,?,?)`, tenantID, projectID, flavorID, now, now)
+INSERT INTO workspaces (tenant_id, project_id, flavor_id, sensitivity, allow_cloud, allow_cloud_summary_only, file_action_policy, created_at, updated_at)
+VALUES (?,?,?,?,?,?,?,?,?)`, tenantID, projectID, flavorID, policy.Sensitivity, policy.AllowCloud, policy.AllowCloudSummaryOnly, policy.FileActionPolicy, now, now)
 	if err != nil {
 		return nil, err
 	}
@@ -203,12 +268,22 @@ func (s *Store) GetWorkspace(ctx context.Context, tenantID string, id int64) (*W
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("operator store unavailable")
 	}
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		ws, err := s.getWorkspaceRow(ctx, tenant, id)
+		if err != nil || ws != nil {
+			return ws, err
+		}
+	}
+	return nil, nil
+}
+
+func (s *Store) getWorkspaceRow(ctx context.Context, tenantID string, id int64) (*Workspace, error) {
 	var w Workspace
 	var ca, ua string
 	err := s.db.QueryRowContext(ctx, `
-SELECT id, tenant_id, project_id, flavor_id, reindex_generation, created_at, updated_at
+SELECT id, tenant_id, project_id, flavor_id, sensitivity, allow_cloud, allow_cloud_summary_only, file_action_policy, reindex_generation, created_at, updated_at
 FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenantID).Scan(
-		&w.ID, &w.TenantID, &w.ProjectID, &w.FlavorID, &w.ReindexGeneration, &ca, &ua)
+		&w.ID, &w.TenantID, &w.ProjectID, &w.FlavorID, &w.Sensitivity, &w.AllowCloud, &w.AllowCloudSummaryOnly, &w.FileActionPolicy, &w.ReindexGeneration, &ca, &ua)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -226,17 +301,34 @@ FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenantID).Scan(
 }
 
 // UpdateWorkspaceProjectFlavor updates scope fields for a workspace.
-func (s *Store) UpdateWorkspaceProjectFlavor(ctx context.Context, tenantID string, id int64, projectID, flavorID string) error {
+func (s *Store) UpdateWorkspaceProjectFlavor(ctx context.Context, tenantID string, id int64, projectID, flavorID string, policies ...WorkspacePolicy) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("operator store unavailable")
 	}
 	if projectID == "" {
 		return fmt.Errorf("project_id required")
 	}
+	policy := defaultWorkspacePolicy()
+	if len(policies) > 0 {
+		policy = policies[0]
+	} else {
+		current, err := s.GetWorkspace(ctx, tenantID, id)
+		if err != nil {
+			return err
+		}
+		if current == nil {
+			return fmt.Errorf("workspace not found")
+		}
+		policy = WorkspacePolicy{current.Sensitivity, current.AllowCloud, current.AllowCloudSummaryOnly, current.FileActionPolicy}
+	}
+	policy, err := normalizeWorkspacePolicy(policy)
+	if err != nil {
+		return err
+	}
 	now := s.nowRFC3339()
 	res, err := s.db.ExecContext(ctx, `
-UPDATE workspaces SET project_id = ?, flavor_id = ?, updated_at = ?
-WHERE id = ? AND tenant_id = ?`, projectID, flavorID, now, id, tenantID)
+UPDATE workspaces SET project_id = ?, flavor_id = ?, sensitivity = ?, allow_cloud = ?, allow_cloud_summary_only = ?, file_action_policy = ?, updated_at = ?
+WHERE id = ? AND tenant_id = ?`, projectID, flavorID, policy.Sensitivity, policy.AllowCloud, policy.AllowCloudSummaryOnly, policy.FileActionPolicy, now, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -250,23 +342,65 @@ WHERE id = ? AND tenant_id = ?`, projectID, flavorID, now, id, tenantID)
 	return nil
 }
 
+// ResolveWorkspaceScope returns the lowest-id workspace matching a tenant/project/flavor
+// scope and all matching ids for ambiguity logging.
+func (s *Store) ResolveWorkspaceScope(ctx context.Context, tenantID, projectID, flavorID string) (*Workspace, []int64, error) {
+	if s == nil || s.db == nil {
+		return nil, nil, fmt.Errorf("operator store unavailable")
+	}
+	var ids []int64
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		ids, err := s.listWorkspaceIDsForScope(ctx, tenant, projectID, flavorID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(ids) > 0 {
+			workspace, err := s.GetWorkspace(ctx, tenantID, ids[0])
+			return workspace, ids, err
+		}
+	}
+	return nil, ids, nil
+}
+
+func (s *Store) listWorkspaceIDsForScope(ctx context.Context, tenantID, projectID, flavorID string) ([]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id FROM workspaces
+WHERE tenant_id = ? AND project_id = ? AND flavor_id = ?
+ORDER BY id`, tenantID, projectID, flavorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // DeleteWorkspace removes a workspace and its paths (CASCADE).
 func (s *Store) DeleteWorkspace(ctx context.Context, tenantID string, id int64) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("operator store unavailable")
 	}
-	res, err := s.db.ExecContext(ctx, `DELETE FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenantID)
-	if err != nil {
-		return err
+	for _, tenant := range workspaceTenantCandidates(tenantID) {
+		res, err := s.db.ExecContext(ctx, `DELETE FROM workspaces WHERE id = ? AND tenant_id = ?`, id, tenant)
+		if err != nil {
+			return err
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			return nil
+		}
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return fmt.Errorf("workspace not found")
-	}
-	return nil
+	return fmt.Errorf("workspace not found")
 }
 
 // AddPath appends a watched path to a workspace.

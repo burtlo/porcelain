@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 
 	gwconfig "github.com/lynn/porcelain/chimera/internal/config"
 	"github.com/lynn/porcelain/chimera/internal/logfmt"
@@ -20,15 +21,28 @@ func LogSink(storeWriter io.Writer, normalize func(io.Writer) io.Writer, minLeve
 	return normalize(sink)
 }
 
-func resolveLogLevel(gatewayPath string) slog.Level {
-	if e := os.Getenv("LOG_LEVEL"); e != "" {
+// resolveCollectorLogLevel returns the supervisor collector gate level.
+// LOG_LEVEL env overrides supervisor.log_level from chimera.yaml.
+func resolveCollectorLogLevel(res *gwconfig.Resolved) slog.Level {
+	if e := strings.TrimSpace(os.Getenv("LOG_LEVEL")); e != "" {
 		return wline.ParseLogLevel(e)
 	}
-	res, err := gwconfig.LoadGatewayYAML(gatewayPath, nil)
-	if err == nil {
-		return wline.ParseLogLevel(res.LogLevel)
+	if res != nil && strings.TrimSpace(res.SupervisorLogLevel) != "" {
+		return wline.ParseLogLevel(res.SupervisorLogLevel)
 	}
 	return slog.LevelInfo
+}
+
+// resolveLogLevel loads chimera.yaml and returns the collector gate (legacy name kept for callers).
+func resolveLogLevel(gatewayPath string) slog.Level {
+	res, err := gwconfig.LoadChimeraYAML(gatewayPath, nil)
+	if err != nil {
+		if e := strings.TrimSpace(os.Getenv("LOG_LEVEL")); e != "" {
+			return wline.ParseLogLevel(e)
+		}
+		return slog.LevelInfo
+	}
+	return resolveCollectorLogLevel(res)
 }
 
 func buildLogger(w io.Writer, level slog.Level, json bool) *slog.Logger {

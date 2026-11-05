@@ -100,6 +100,23 @@
   background: var(--embed-conv-chip-bg);
   color: var(--embed-conv-chip-fg);
 }
+.sum-conv-harness-timeline { margin: 0.5rem 0; }
+.sum-conv-harness-turn {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+.sum-conv-harness-turn__label {
+  flex: 0 0 auto;
+  min-width: 3.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--embed-text-muted);
+}
+.sum-conv-harness-turn .sum-conv-chip-row { margin: 0; }
+.sum-conv-chip--harness { font-size: 0.72rem; }
+.sum-conv-chip--started { opacity: 0.72; }
 .sum-conv-kv { margin: 0.35rem 0 0.5rem; }
 .sum-conv-kv-grid {
   display: grid;

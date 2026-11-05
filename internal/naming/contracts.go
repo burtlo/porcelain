@@ -109,7 +109,7 @@ const (
 	TargetHeaderPrefix = "X-Chimera"
 
 	// Environment-variable contracts.
-	EnvGatewayConfigTarget        = "CHIMERA_GATEWAY_CONFIG"
+	EnvChimeraConfigTarget        = "CHIMERA_CONFIG"
 	EnvBrokerAPIKeyTarget         = "CHIMERA_BROKER_API_KEY"
 	EnvGatewayURLTarget           = "CHIMERA_GATEWAY_URL"
 	EnvGatewayTokenTarget         = "CHIMERA_GATEWAY_TOKEN"
@@ -130,16 +130,20 @@ const (
 	HeaderUpstreamModelTarget = "X-Chimera-Upstream-Model"
 	// HeaderRAGHitsTarget is a JSON array of {source,text,score} retrieval hits for the turn.
 	HeaderRAGHitsTarget = "X-Chimera-RAG-Hits"
+	// HeaderHarnessSummaryTarget is base64-encoded redacted harness turn envelope JSON.
+	HeaderHarnessSummaryTarget = "X-Chimera-Harness-Summary"
+	// HeaderTurnIndexTarget is the monotonic turn counter for the conversation thread.
+	HeaderTurnIndexTarget = "X-Chimera-Turn-Index"
 	// HeaderWorkspaceRowIDTarget is the operator SQLite workspace row id active when chat started.
 	HeaderWorkspaceRowIDTarget = "X-Chimera-Workspace-Id"
 
 	// Config/file naming contracts.
 	PathsAPIKeysKeyTarget       = "api_keys"
 	APIKeysFileTarget           = "api-keys.yaml"
-	GatewayConfigFileTarget     = "gateway.yaml"
-	GatewayConfigDirTarget      = "config"
+	ChimeraConfigFileTarget     = "chimera.yaml"
+	ChimeraConfigDirTarget      = "config"
 	RoutingPolicyFileTarget     = "routing-policy.yaml"
-	DefaultGatewayConfigRelPath = "config/gateway.yaml"
+	DefaultChimeraConfigRelPath = "config/chimera.yaml"
 
 	// Local hidden state directories.
 	IndexerHiddenStateDirTarget = ".locus"

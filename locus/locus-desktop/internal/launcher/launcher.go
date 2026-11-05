@@ -196,6 +196,11 @@ func isSensitiveArgKey(k string) bool {
 
 // StopOwnedSupervisor stops a desktop-owned supervisor and its supervised children.
 // controlBaseURL should be the supervisor control API base (e.g. http://127.0.0.1:7710).
+//
+// Prefer POST /shutdown alone when the control plane accepts it. The supervisor's
+// stopRoot comes from signal.NotifyContext; invoking it restores the default SIGINT
+// disposition, so a follow-up Interrupt can kill the supervisor before children are
+// signaled and orphan wrappers on Unix (notably chimera-broker / bifrost-http).
 func StopOwnedSupervisor(cmd *exec.Cmd, controlBaseURL string) error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
@@ -205,11 +210,13 @@ func StopOwnedSupervisor(cmd *exec.Cmd, controlBaseURL string) error {
 		waitCh <- cmd.Wait()
 	}()
 
-	supervisor.RequestShutdown(controlBaseURL)
-	if err := cmd.Process.Signal(os.Interrupt); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		// Interrupt may fail on Windows when the desktop has no console; HTTP shutdown above is primary.
-		if controlBaseURL == "" {
-			return err
+	if !supervisor.RequestShutdown(controlBaseURL) {
+		// HTTP shutdown unavailable — fall back to Interrupt (Windows may fail
+		// without a console; tree-kill below still covers the timeout path).
+		if err := cmd.Process.Signal(os.Interrupt); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			if controlBaseURL == "" {
+				return err
+			}
 		}
 	}
 

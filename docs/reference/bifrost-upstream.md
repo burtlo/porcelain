@@ -72,7 +72,7 @@ Gateway YAML uses `upstream.*` for the OpenAI-compatible hop. Legacy `litellm` /
 |-------|------|
 | `upstream.base_url` | Broker backend root (e.g. `http://127.0.0.1:8080`). Supervisor overrides to match supervised listen addresses. |
 | `upstream.api_key_env` | Env var for `Authorization: Bearer` on upstream `/v1/*`. Default `CHIMERA_BROKER_API_KEY`. |
-| Virtual model stacks | Per-model fallback chains and routing rules in operator SQLite — see [operator-virtual-models](../features/operator-virtual-models.md). |
+| Assistant stacks | Per-assistant fallback chains and routing rules in operator SQLite — see [operator-assistants](../features/operator-assistants.md). |
 | `paths.tokens` / routing policy | Gateway auth and policy file paths. |
 
 ---

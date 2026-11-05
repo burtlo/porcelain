@@ -8,14 +8,14 @@ import (
 
 func TestOperatorSQLitePaths_default(t *testing.T) {
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "config", "gateway.yaml")
+	gw := filepath.Join(dir, "config", "chimera.yaml")
 	if err := os.MkdirAll(filepath.Dir(gw), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(gw, []byte("gateway:\n  semver: 0.1.0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

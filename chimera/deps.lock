@@ -9,3 +9,10 @@ QDRANT_RELEASE=v1.14.1
 # BiFrost source — full git ref: tag, branch, or 40-char commit SHA
 BIFROST_GIT_URL=https://github.com/maximhq/bifrost.git
 BIFROST_GIT_REF=58076d50df0d48d47ad917da3f604cf787ec7708
+
+# Operator UI fonts (scripts/adminui-fonts-fetch.sh → chimera/.deps; optional sibling clones)
+# Material Symbols Outlined variable font; Hanken Grotesk from google/fonts ofl tree.
+MATERIAL_ICONS_GIT_URL=https://github.com/google/material-design-icons.git
+MATERIAL_ICONS_GIT_REF=master
+GOOGLE_FONTS_GIT_URL=https://github.com/google/fonts.git
+GOOGLE_FONTS_GIT_REF=main

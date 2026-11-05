@@ -24,7 +24,7 @@ import (
 func testRAGEmbeddingEnv(t *testing.T, embedModel string, internalEnabled ...bool) (*http.ServeMux, *handler.Handler, *gruntime.Runtime, string, *httptest.Server) {
 	t.Helper()
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, naming.GatewayConfigFileTarget)
+	gwPath := filepath.Join(dir, naming.ChimeraConfigFileTarget)
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -40,12 +40,11 @@ func testRAGEmbeddingEnv(t *testing.T, embedModel string, internalEnabled ...boo
 	t.Cleanup(upstream.Close)
 
 	raw := "gateway:\n  semver: \"0.2.0\"\n  listen_port: 0\n  listen_host: \"127.0.0.1\"\n" +
-		"broker:\n  base_url: \"" + upstream.URL + "\"\n  api_key_env: \"" + naming.EnvBrokerAPIKeyTarget + "\"\n" +
-		"health:\n  timeout_ms: 2000\n  chat_timeout_ms: 60000\n" +
-		"paths:\n  tokens: \"./" + naming.APIKeysFileTarget + "\"\n  routing_policy: \"./" + naming.RoutingPolicyFileTarget + "\"\n" +
-		"routing:\n  fallback_chain:\n    - \"m\"\n" +
+		"  timeouts:\n    broker_ms: 2000\n    chat_ms: 60000\n" +
+		"  auth:\n    api_keys: \"./" + naming.APIKeysFileTarget + "\"\n" +
+		"broker:\n  url: \"" + upstream.URL + "\"\n  api_key_env: \"" + naming.EnvBrokerAPIKeyTarget + "\"\n" +
 		"vectorstore:\n  url: \"http://127.0.0.1:6333\"\n" +
-		"rag:\n  enabled: true\n  embedding:\n    model: \"" + embedModel + "\"\n    dim: 8\n" +
+		"search:\n  enabled: true\n  embedding:\n    model: \"" + embedModel + "\"\n    dim: 8\n" +
 		"  chunking:\n    size: 128\n    overlap: 32\n  ingest:\n    max_bytes: 10485760\n  defaults:\n    project_id: \"default\"\n"
 	if len(internalEnabled) > 0 && internalEnabled[0] {
 		raw += "internal_embedding:\n  enabled: true\n  provider: \"internal\"\n  model: \"internal/nomic-embed-text\"\n  dim: 8\n  base_url: \"" + upstream.URL + "\"\n  model_path: \"./model.gguf\"\n"
@@ -211,12 +210,12 @@ func TestRAGEmbeddingPUT_persistsAndReloadsIndexerConfig(t *testing.T) {
 		}())
 	}
 
-	raw, err := os.ReadFile(rt.GatewayPath())
+	raw, err := os.ReadFile(rt.ChimeraYAMLPath())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), "ollama/nomic-embed-text:latest") || !strings.Contains(string(raw), "dim: 768") {
-		t.Fatalf("gateway.yaml missing patch: %s", raw)
+		t.Fatalf("chimera.yaml missing patch: %s", raw)
 	}
 }
 
@@ -265,17 +264,18 @@ func TestBuildEmbeddingCandidates_emptyWhenNoCatalog(t *testing.T) {
 func TestResolveEmbeddingDim_known(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gwPath := filepath.Join(dir, "gateway.yaml")
-	raw := `gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+	gwPath := filepath.Join(dir, "chimera.yaml")
+	raw := `gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 vectorstore: { url: "http://127.0.0.1:6333" }
-rag:
+search:
   enabled: true
   embedding:
     model: "x"
     dim: 8
 broker:
-  base_url: "http://127.0.0.1:8080"
+  url: "http://127.0.0.1:8080"
 `
 	if err := os.WriteFile(gwPath, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)

@@ -7,10 +7,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lynn/porcelain/chimera/chimera-indexer/adapter"
 	"github.com/lynn/porcelain/chimera/internal/providerfreetier"
 	"github.com/lynn/porcelain/chimera/internal/providerlimits"
 	"github.com/lynn/porcelain/internal/naming"
 	"gopkg.in/yaml.v3"
+)
+
+// Service names used in supervisor.services and suite membership.
+const (
+	ServiceGateway     = "gateway"
+	ServiceBroker      = "broker"
+	ServiceVectorstore = "vectorstore"
+	ServiceIndexer     = "indexer"
 )
 
 // Resolved matches TypeScript ResolvedGatewayConfig (src/config.ts).
@@ -22,57 +31,77 @@ type Resolved struct {
 	BrokerLogLevel    string // supervised chimera-broker wrapper (broker.log_level).
 	UpstreamBaseURL   string
 	UpstreamAPIKeyEnv string
-	// UpstreamAPIKey is the Bearer token from gateway.yaml (broker.api_key). Non-empty process env named by UpstreamAPIKeyEnv overrides at runtime.
+	// UpstreamAPIKey is the Bearer token from chimera.yaml (broker.api_key). Non-empty process env named by UpstreamAPIKeyEnv overrides at runtime.
 	UpstreamAPIKey    string
 	HealthUpstreamURL string
 	HealthTimeoutMs   int
 	ChatTimeoutMs     int
-	// AvailableModelsPollMs is the period for the BiFrost `/v1/models` catalog poller that
-	// drives the Provider health strip and future routing/embedding/router-model auditors.
-	// 0 disables polling (one-shot startup refresh only). See internal/server/availablemodels.go.
+	// AvailableModelsPollMs is the period for the BiFrost `/v1/models` catalog poller.
+	// 0 disables polling (one-shot startup refresh only).
 	AvailableModelsPollMs int
 	TokensPath            string
-	GatewayYAMLPath       string
+	ChimeraYAMLPath       string // path to chimera.yaml
 	// ProviderFreeTierPath is the resolved filesystem path to provider-free-tier.yaml.
-	ProviderFreeTierPath string
-	ProviderFreeTierSpec *providerfreetier.Spec
-	// Metrics (G6): SQLite under data/gateway; see docs/plans/version-v0.1.1.md §3.6.
-	MetricsEnabled       bool
-	MetricsSQLitePath    string // absolute path to metrics.sqlite
-	MetricsMigrationsDir string // absolute path to migrations/chimera-gateway/metrics directory
-	// Operator SQLite: workspaces for supervised indexer (separate from metrics).
+	ProviderFreeTierPath  string
+	ProviderFreeTierSpec  *providerfreetier.Spec
+	MetricsEnabled        bool
+	MetricsSQLitePath     string
+	MetricsMigrationsDir  string
 	OperatorSQLitePath    string
 	OperatorMigrationsDir string
-	// Provider/model limits (G5 / §3.7). Path is always resolved; Spec is non-nil (empty when
-	// file is missing or blank).
-	ProviderLimitsPath string
-	ProviderLimitsSpec *providerlimits.Config
-	// RAG holds gateway v0.2 retrieval-augmented-generation settings; RAG.Enabled
-	// gates ingest, indexer REST, retrieval, and the /health Qdrant probe.
+	ProviderLimitsPath    string
+	ProviderLimitsSpec    *providerlimits.Config
+	// RAG holds search-platform settings (YAML search:); Enabled gates ingest, indexer REST, retrieval, and the /health vectorstore probe.
 	RAG RAG
 	// InternalEmbedding configures the opt-in supervised chimera-embed runtime.
 	InternalEmbedding InternalEmbedding
 
-	// IndexerSupervised* configures optional chimera-index child under chimera serve / desktop (v0.5).
+	// Suite membership (enabled does not start processes).
+	GatewayEnabled     bool
+	BrokerEnabled      bool
+	VectorstoreEnabled bool
+	IndexerEnabled     bool
+
+	// Supervisor* from supervisor: block (CLI flags may override at runtime).
+	SupervisorLogLevel            string // collector gate for LogSink
+	SupervisorLogJSON             bool
+	SupervisorListen              string
+	SupervisorServices            []string // nil/empty → default all enabled services
+	SupervisorGatewayBin          string
+	SupervisorGatewayListen       string
+	SupervisorBrokerBin           string
+	SupervisorBrokerListen        string
+	SupervisorBrokerEndpoint      string
+	SupervisorBrokerDataDir       string
+	SupervisorVectorstoreBin      string
+	SupervisorVectorstoreListen   string
+	SupervisorVectorstoreEndpoint string
+	SupervisorVectorstoreDataPath string
+	SupervisorShutdownTimeoutMS   int
+	SupervisorTerminateWaitMS     int
+
+	// Indexer inline FileConfig + overlay / materialize paths.
+	IndexerFileConfig       adapter.FileConfig
+	IndexerOverlayPath      string // absolute optional operator overlay (config_path)
+	IndexerMaterializedPath string // absolute path written for --config
+	IndexerBin              string
+	IndexerLogJSON          bool
+
+	// IndexerSupervised* retained for UI/API compatibility (derived from suite + search).
 	IndexerSupervisedEnabled              bool
-	IndexerSupervisedBin                  string // empty → resolve next to chimera binary or PATH
-	IndexerSupervisedConfigPath           string // absolute path to single merged --config file
-	IndexerSupervisedStartWhenRAGDisabled bool
+	IndexerSupervisedBin                  string
+	IndexerSupervisedConfigPath           string // materialize path (child --config)
+	IndexerSupervisedStartWhenRAGDisabled bool   // always false; retained for DTO compat
 	IndexerSupervisedLogJSON              bool
 
-	// WitnessSampleMaxChars caps head/tail runes for conversation.payload.sample (Phase 8).
-	// When zero, defaults to 256 in WitnessSampleMaxRunes().
-	WitnessSampleMaxChars int
-	// WitnessSampleForceAtDebug enables payload samples at debug log level (still redacted).
-	// Trace log level always enables payload samples when the gateway logger is configured for trace.
-	WitnessSampleForceAtDebug bool
-
-	// OperatorLogsIndexerPinnedLinesMax reserves servicelogs ring slots for critical indexer lines.
+	WitnessSampleMaxChars             int
+	WitnessSampleForceAtDebug         bool
 	OperatorLogsIndexerPinnedLinesMax int
+
+	MCP MCP
 }
 
-// ShouldEmitPayloadSample reports whether conversation.payload.sample may be emitted
-// (trace log level, or debug with WitnessSampleForceAtDebug).
+// ShouldEmitPayloadSample reports whether conversation.payload.sample may be emitted.
 func (r *Resolved) ShouldEmitPayloadSample() bool {
 	if r == nil {
 		return false
@@ -98,88 +127,99 @@ func (r *Resolved) WitnessSampleMaxRunes() int {
 	return r.WitnessSampleMaxChars
 }
 
-type brokerBlock struct {
-	BaseURL   string `yaml:"base_url"`
-	APIKeyEnv string `yaml:"api_key_env"`
-	APIKey    string `yaml:"api_key"`
-	LogLevel  string `yaml:"log_level"`
+// DefaultSupervisorServices returns the launch list when supervisor.services is omitted.
+func (r *Resolved) DefaultSupervisorServices() []string {
+	if r == nil {
+		return nil
+	}
+	out := make([]string, 0, 4)
+	if r.VectorstoreEnabled {
+		out = append(out, ServiceVectorstore)
+	}
+	if r.BrokerEnabled {
+		out = append(out, ServiceBroker)
+	}
+	if r.GatewayEnabled {
+		out = append(out, ServiceGateway)
+	}
+	if r.IndexerEnabled {
+		out = append(out, ServiceIndexer)
+	}
+	return out
 }
 
-type gatewayDoc struct {
-	Gateway struct {
-		Semver     string `yaml:"semver"`
-		ListenPort int    `yaml:"listen_port"`
-		ListenHost string `yaml:"listen_host"`
-		LogLevel   string `yaml:"log_level"`
-		LogWitness struct {
-			PayloadSampleMaxChars     *int  `yaml:"payload_sample_max_chars"`
-			ForcePayloadSampleAtDebug *bool `yaml:"force_payload_sample_at_debug"`
-		} `yaml:"log_witness"`
-	} `yaml:"gateway"`
-	Broker brokerBlock `yaml:"broker"`
-	Health struct {
-		UpstreamURL           string `yaml:"upstream_url"`
-		TimeoutMs             int    `yaml:"timeout_ms"`
-		ChatMs                int    `yaml:"chat_timeout_ms"`
-		AvailableModelsPollMs int    `yaml:"available_models_poll_ms"`
-	} `yaml:"health"`
-	Paths struct {
-		APIKeys             string `yaml:"api_keys"`
-		ProviderFreeTier    string `yaml:"provider_free_tier"`
-		ProviderModelLimits string `yaml:"provider_model_limits"`
-	} `yaml:"paths"`
-	Metrics struct {
-		Enabled       *bool  `yaml:"enabled"`
-		SQLitePath    string `yaml:"sqlite_path"`
-		MigrationsDir string `yaml:"migrations_dir"`
-	} `yaml:"metrics"`
-	Operator struct {
-		SQLitePath    string `yaml:"sqlite_path"`
-		MigrationsDir string `yaml:"migrations_dir"`
-	} `yaml:"operator"`
-	Vectorstore       vectorstoreDoc       `yaml:"vectorstore"`
-	RAG               ragDoc               `yaml:"rag"`
-	InternalEmbedding internalEmbeddingDoc `yaml:"internal_embedding"`
+// ResolveSupervisorServices returns the effective launch list, or an error if a listed service is suite-disabled.
+func (r *Resolved) ResolveSupervisorServices() ([]string, error) {
+	if r == nil {
+		return nil, fmt.Errorf("nil resolved config")
+	}
+	list := r.SupervisorServices
+	if len(list) == 0 {
+		return r.DefaultSupervisorServices(), nil
+	}
+	enabled := map[string]bool{
+		ServiceGateway:     r.GatewayEnabled,
+		ServiceBroker:      r.BrokerEnabled,
+		ServiceVectorstore: r.VectorstoreEnabled,
+		ServiceIndexer:     r.IndexerEnabled,
+	}
+	out := make([]string, 0, len(list))
+	seen := map[string]bool{}
+	for _, raw := range list {
+		name := strings.ToLower(strings.TrimSpace(raw))
+		if name == "" || seen[name] {
+			continue
+		}
+		ok, known := enabled[name]
+		if !known {
+			return nil, fmt.Errorf("supervisor.services: unknown service %q", raw)
+		}
+		if !ok {
+			return nil, fmt.Errorf("supervisor.services: %q is listed but %s.enabled is false", name, name)
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out, nil
+}
 
-	Indexer struct {
-		Supervised struct {
-			Enabled              *bool  `yaml:"enabled"`
-			Bin                  string `yaml:"bin"`
-			ConfigPath           string `yaml:"config_path"`
-			StartWhenRAGDisabled *bool  `yaml:"start_when_rag_disabled"`
-			LogJSON              *bool  `yaml:"log_json"`
-		} `yaml:"supervised"`
-	} `yaml:"indexer"`
-
-	OperatorLogs struct {
-		IndexerPinnedLinesMax int `yaml:"indexer_pinned_lines_max"`
-	} `yaml:"operator_logs"`
+// ServiceInLaunchList reports whether name is in the effective supervisor launch set.
+func (r *Resolved) ServiceInLaunchList(name string) bool {
+	list, err := r.ResolveSupervisorServices()
+	if err != nil {
+		return false
+	}
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, s := range list {
+		if s == name {
+			return true
+		}
+	}
+	return false
 }
 
 const (
-	defaultSemver          = "0.1.0"
-	defaultListenPort      = 3000
-	defaultListenHost      = "0.0.0.0"
-	defaultLogLevel        = "info"
-	defaultBaseURL         = "http://chimera-broker:8080"
-	defaultAPIKeyEnv       = naming.EnvBrokerAPIKeyTarget
-	defaultHealthTimeoutMs = 5000
-	defaultChatTimeoutMs   = 300_000
-	// defaultAvailableModelsPollMs polls BiFrost `/v1/models` every 30s. Set to 0 in
-	// gateway.yaml (`health.available_models_poll_ms`) to disable periodic polling.
+	defaultSemver                = "0.1.0"
+	defaultListenPort            = 3000
+	defaultListenHost            = "0.0.0.0"
+	defaultLogLevel              = "info"
+	defaultBaseURL               = "http://chimera-broker:8080"
+	defaultAPIKeyEnv             = naming.EnvBrokerAPIKeyTarget
+	defaultHealthTimeoutMs       = 5000
+	defaultChatTimeoutMs         = 300_000
 	defaultAvailableModelsPollMs = 30_000
 	defaultIndexerPinnedLinesMax = 64
 )
 
-// LoadGatewayYAML reads and parses gateway.yaml at filePath (absolute or cwd-relative).
-func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
+// LoadChimeraYAML reads and parses chimera.yaml at filePath.
+func LoadChimeraYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 	raw, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	var doc gatewayDoc
+	var doc chimeraDoc
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		return nil, fmt.Errorf("parse gateway yaml: %w", err)
+		return nil, fmt.Errorf("parse chimera yaml: %w", err)
 	}
 
 	semver := doc.Gateway.Semver
@@ -187,7 +227,7 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		semver = defaultSemver
 	}
 
-	upBase := strings.TrimSuffix(doc.Broker.BaseURL, "/")
+	upBase := strings.TrimSuffix(strings.TrimSpace(doc.Broker.URL), "/")
 	if upBase == "" {
 		upBase = strings.TrimSuffix(defaultBaseURL, "/")
 	}
@@ -196,32 +236,26 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 	if apiKeyEnv == "" {
 		apiKeyEnv = defaultAPIKeyEnv
 	}
-
 	apiKey := strings.TrimSpace(doc.Broker.APIKey)
 
-	healthURL := strings.TrimSpace(doc.Health.UpstreamURL)
+	healthURL := strings.TrimSpace(doc.Broker.HealthURL)
 	if healthURL == "" {
 		healthURL = upBase + "/health"
 	}
 
 	baseDir := filepath.Dir(filePath)
-	apiKeysRel := strings.TrimSpace(doc.Paths.APIKeys)
+
+	apiKeysRel := strings.TrimSpace(doc.Gateway.Auth.APIKeys)
 	if apiKeysRel == "" {
 		apiKeysRel = "./" + naming.APIKeysFileTarget
 	}
-	tokensPath := filepath.Join(baseDir, apiKeysRel)
-	if filepath.IsAbs(apiKeysRel) {
-		tokensPath = apiKeysRel
-	}
+	tokensPath := resolveBeside(baseDir, apiKeysRel)
 
-	ftRel := strings.TrimSpace(doc.Paths.ProviderFreeTier)
+	ftRel := strings.TrimSpace(doc.Broker.Models.FreeTier)
 	if ftRel == "" {
 		ftRel = "./provider-free-tier.yaml"
 	}
-	ftPath := filepath.Join(baseDir, ftRel)
-	if filepath.IsAbs(ftRel) {
-		ftPath = ftRel
-	}
+	ftPath := resolveBeside(baseDir, ftRel)
 	var ftSpec *providerfreetier.Spec
 	if st, err := os.Stat(ftPath); err == nil && !st.IsDir() {
 		s, err := providerfreetier.Load(ftPath)
@@ -236,14 +270,11 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		log.Warn("provider free tier path not stat-able", "msg", "chat.provider_limits.config_missing", "path", ftPath, "err", err)
 	}
 
-	limitsRel := strings.TrimSpace(doc.Paths.ProviderModelLimits)
+	limitsRel := strings.TrimSpace(doc.Broker.Models.Limits)
 	if limitsRel == "" {
 		limitsRel = "./provider-model-limits.yaml"
 	}
-	limitsPath := filepath.Join(baseDir, limitsRel)
-	if filepath.IsAbs(limitsRel) {
-		limitsPath = limitsRel
-	}
+	limitsPath := resolveBeside(baseDir, limitsRel)
 	limitsSpec, err := providerlimits.LoadOrEmpty(limitsPath)
 	if err != nil {
 		if log != nil {
@@ -261,17 +292,15 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		listenHost = defaultListenHost
 	}
 
-	ht := doc.Health.TimeoutMs
+	ht := doc.Gateway.Timeouts.BrokerMS
 	if ht == 0 {
 		ht = defaultHealthTimeoutMs
 	}
-	ct := doc.Health.ChatMs
+	ct := doc.Gateway.Timeouts.ChatMS
 	if ct == 0 {
 		ct = defaultChatTimeoutMs
 	}
-	// Negative explicitly disables; zero falls through to the default. The poller treats <=0
-	// as "no periodic refresh" (one-shot startup only).
-	availPoll := doc.Health.AvailableModelsPollMs
+	availPoll := doc.Gateway.Catalog.PollMS
 	if availPoll == 0 {
 		availPoll = defaultAvailableModelsPollMs
 	}
@@ -280,42 +309,30 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 	}
 
 	metricsEnabled := true
-	if doc.Metrics.Enabled != nil {
-		metricsEnabled = *doc.Metrics.Enabled
+	if doc.Gateway.Metrics.Enabled != nil {
+		metricsEnabled = *doc.Gateway.Metrics.Enabled
 	}
-	sqliteRel := strings.TrimSpace(doc.Metrics.SQLitePath)
+	sqliteRel := strings.TrimSpace(doc.Gateway.Metrics.SQLitePath)
 	if sqliteRel == "" {
 		sqliteRel = filepath.Join("..", "data", "gateway", "metrics.sqlite")
 	}
-	metricsSQLite := filepath.Join(baseDir, sqliteRel)
-	if filepath.IsAbs(sqliteRel) {
-		metricsSQLite = sqliteRel
-	}
-	migRel := strings.TrimSpace(doc.Metrics.MigrationsDir)
+	metricsSQLite := resolveBeside(baseDir, sqliteRel)
+	migRel := strings.TrimSpace(doc.Gateway.Metrics.MigrationsDir)
 	if migRel == "" {
 		migRel = filepath.Join("..", "migrations", "chimera-gateway", "metrics")
 	}
-	metricsMig := filepath.Join(baseDir, migRel)
-	if filepath.IsAbs(migRel) {
-		metricsMig = migRel
-	}
+	metricsMig := resolveBeside(baseDir, migRel)
 
 	opSqliteRel := strings.TrimSpace(doc.Operator.SQLitePath)
 	if opSqliteRel == "" {
 		opSqliteRel = filepath.Join("..", "data", "gateway", "operator.sqlite")
 	}
-	operatorSQLite := filepath.Join(baseDir, opSqliteRel)
-	if filepath.IsAbs(opSqliteRel) {
-		operatorSQLite = opSqliteRel
-	}
+	operatorSQLite := resolveBeside(baseDir, opSqliteRel)
 	opMigRel := strings.TrimSpace(doc.Operator.MigrationsDir)
 	if opMigRel == "" {
 		opMigRel = filepath.Join("..", "migrations", "chimera-gateway", "operator")
 	}
-	operatorMig := filepath.Join(baseDir, opMigRel)
-	if filepath.IsAbs(opMigRel) {
-		operatorMig = opMigRel
-	}
+	operatorMig := resolveBeside(baseDir, opMigRel)
 
 	logLevel := doc.Gateway.LogLevel
 	if logLevel == "" {
@@ -332,7 +349,7 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		witnessForceDebug = *doc.Gateway.LogWitness.ForcePayloadSampleAtDebug
 	}
 
-	rag := doc.RAG.effective(doc.Vectorstore)
+	rag := doc.Search.toRAGDoc().effective(doc.Vectorstore)
 	internalEmbedding := doc.InternalEmbedding.effective(baseDir)
 	if err := internalEmbedding.Validate(); err != nil {
 		return nil, err
@@ -340,38 +357,61 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 	applyInternalEmbeddingToRAG(&rag, internalEmbedding)
 	if err := rag.Validate(); err != nil {
 		if log != nil {
-			log.Error("rag config invalid; disabling RAG", "msg", "rag.config.invalid", "err", err)
+			log.Error("search config invalid; disabling search", "msg", "rag.config.invalid", "err", err)
 		}
 		rag = RAG{Enabled: false}
 	}
 
-	idxSupEnabled := doc.Indexer.Supervised.Enabled != nil && *doc.Indexer.Supervised.Enabled
-	idxStartWhenRAGOff := doc.Indexer.Supervised.StartWhenRAGDisabled != nil && *doc.Indexer.Supervised.StartWhenRAGDisabled
+	gatewayEnabled := boolOrDefault(doc.Gateway.Enabled, true)
+	brokerEnabled := boolOrDefault(doc.Broker.Enabled, true)
+	vectorstoreEnabled := boolOrDefault(doc.Vectorstore.Enabled, true)
+	indexerEnabled := boolOrDefault(doc.Indexer.Enabled, true)
+
+	idxBin := strings.TrimSpace(doc.Indexer.Bin)
 	idxLogJSON := true
-	if doc.Indexer.Supervised.LogJSON != nil {
-		idxLogJSON = *doc.Indexer.Supervised.LogJSON
+	if doc.Indexer.LogJSON != nil {
+		idxLogJSON = *doc.Indexer.LogJSON
 	}
-	idxCfgRel := strings.TrimSpace(doc.Indexer.Supervised.ConfigPath)
-	if idxCfgRel == "" {
-		// Same directory as gateway.yaml (materialized by make chimera-indexer-configure).
-		idxCfgRel = "indexer.yaml"
+
+	idxOverlayRel := strings.TrimSpace(doc.Indexer.ConfigPath)
+	idxOverlayPath := ""
+	if idxOverlayRel != "" {
+		idxOverlayPath = resolveBeside(baseDir, idxOverlayRel)
 	}
-	idxCfgPath := filepath.Join(baseDir, idxCfgRel)
-	if filepath.IsAbs(idxCfgRel) {
-		idxCfgPath = idxCfgRel
-	}
+
+	materializedRel := filepath.Join("..", "data", "gateway", "indexer.materialized.yaml")
+	materializedPath := resolveBeside(baseDir, materializedRel)
+
+	idxFile := doc.Indexer.FileConfig
 
 	idxPinnedMax := doc.OperatorLogs.IndexerPinnedLinesMax
 	if idxPinnedMax <= 0 {
 		idxPinnedMax = defaultIndexerPinnedLinesMax
 	}
 
+	supLogLevel := strings.TrimSpace(doc.Supervisor.LogLevel)
+	if supLogLevel == "" {
+		supLogLevel = defaultLogLevel
+	}
+	supLogJSON := true
+	if doc.Supervisor.LogJSON != nil {
+		supLogJSON = *doc.Supervisor.LogJSON
+	}
+
+	services := make([]string, 0, len(doc.Supervisor.Services))
+	for _, s := range doc.Supervisor.Services {
+		s = strings.ToLower(strings.TrimSpace(s))
+		if s != "" {
+			services = append(services, s)
+		}
+	}
+
 	if log != nil {
-		log.Info("gateway config resolved", "msg", "gateway.startup.config_resolved",
+		log.Info("chimera config resolved", "msg", "gateway.startup.config_resolved",
 			"filePath", filePath, "api_keys_path", tokensPath)
 	}
 
-	return &Resolved{
+	res := &Resolved{
 		Semver:                                semver,
 		ListenPort:                            listenPort,
 		ListenHost:                            listenHost,
@@ -385,7 +425,7 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		ChatTimeoutMs:                         ct,
 		AvailableModelsPollMs:                 availPoll,
 		TokensPath:                            tokensPath,
-		GatewayYAMLPath:                       filePath,
+		ChimeraYAMLPath:                       filePath,
 		ProviderFreeTierPath:                  ftPath,
 		ProviderFreeTierSpec:                  ftSpec,
 		MetricsEnabled:                        metricsEnabled,
@@ -397,27 +437,65 @@ func LoadGatewayYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		ProviderLimitsSpec:                    limitsSpec,
 		RAG:                                   rag,
 		InternalEmbedding:                     internalEmbedding,
+		GatewayEnabled:                        gatewayEnabled,
+		BrokerEnabled:                         brokerEnabled,
+		VectorstoreEnabled:                    vectorstoreEnabled,
+		IndexerEnabled:                        indexerEnabled,
+		SupervisorLogLevel:                    supLogLevel,
+		SupervisorLogJSON:                     supLogJSON,
+		SupervisorListen:                      strings.TrimSpace(doc.Supervisor.Listen),
+		SupervisorServices:                    services,
+		SupervisorGatewayBin:                  strings.TrimSpace(doc.Supervisor.GatewayBin),
+		SupervisorGatewayListen:               strings.TrimSpace(doc.Supervisor.GatewayListen),
+		SupervisorBrokerBin:                   strings.TrimSpace(doc.Supervisor.BrokerBin),
+		SupervisorBrokerListen:                strings.TrimSpace(doc.Supervisor.BrokerListen),
+		SupervisorBrokerEndpoint:              strings.TrimSpace(doc.Supervisor.BrokerEndpoint),
+		SupervisorBrokerDataDir:               strings.TrimSpace(doc.Supervisor.BrokerDataDir),
+		SupervisorVectorstoreBin:              strings.TrimSpace(doc.Supervisor.VectorstoreBin),
+		SupervisorVectorstoreListen:           strings.TrimSpace(doc.Supervisor.VectorstoreListen),
+		SupervisorVectorstoreEndpoint:         strings.TrimSpace(doc.Supervisor.VectorstoreEndpoint),
+		SupervisorVectorstoreDataPath:         strings.TrimSpace(doc.Supervisor.VectorstoreDataPath),
+		SupervisorShutdownTimeoutMS:           doc.Supervisor.ShutdownTimeoutMS,
+		SupervisorTerminateWaitMS:             doc.Supervisor.TerminateWaitMS,
+		IndexerFileConfig:                     idxFile,
+		IndexerOverlayPath:                    idxOverlayPath,
+		IndexerMaterializedPath:               materializedPath,
+		IndexerBin:                            idxBin,
+		IndexerLogJSON:                        idxLogJSON,
+		IndexerSupervisedEnabled:              indexerEnabled,
+		IndexerSupervisedBin:                  idxBin,
+		IndexerSupervisedConfigPath:           materializedPath,
+		IndexerSupervisedStartWhenRAGDisabled: false,
+		IndexerSupervisedLogJSON:              idxLogJSON,
 		WitnessSampleMaxChars:                 witnessMax,
 		WitnessSampleForceAtDebug:             witnessForceDebug,
-		IndexerSupervisedEnabled:              idxSupEnabled,
-		IndexerSupervisedBin:                  strings.TrimSpace(doc.Indexer.Supervised.Bin),
-		IndexerSupervisedConfigPath:           idxCfgPath,
-		IndexerSupervisedStartWhenRAGDisabled: idxStartWhenRAGOff,
-		IndexerSupervisedLogJSON:              idxLogJSON,
 		OperatorLogsIndexerPinnedLinesMax:     idxPinnedMax,
-	}, nil
+		MCP:                                   parseMCPDoc(doc, log),
+	}
+	if _, err := res.ResolveSupervisorServices(); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
-// ResolveGatewayConfigPath returns CHIMERA gateway config env var or ./config/gateway.yaml relative to cwd.
-func ResolveGatewayConfigPath() (string, error) {
-	if e := strings.TrimSpace(os.Getenv(naming.EnvGatewayConfigTarget)); e != "" {
+func resolveBeside(baseDir, relOrAbs string) string {
+	relOrAbs = strings.TrimSpace(relOrAbs)
+	if filepath.IsAbs(relOrAbs) {
+		return relOrAbs
+	}
+	return filepath.Join(baseDir, relOrAbs)
+}
+
+// ResolveChimeraConfigPath returns CHIMERA_CONFIG when set, otherwise ./config/chimera.yaml.
+func ResolveChimeraConfigPath() (string, error) {
+	if e := strings.TrimSpace(os.Getenv(naming.EnvChimeraConfigTarget)); e != "" {
 		return filepath.Clean(e), nil
 	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(wd, naming.GatewayConfigDirTarget, naming.GatewayConfigFileTarget), nil
+	return filepath.Join(wd, naming.ChimeraConfigDirTarget, naming.ChimeraConfigFileTarget), nil
 }
 
 // ListenAddr returns "host:port" for net.Listen.

@@ -9,7 +9,7 @@ BiFrost (bifrost-http) is NOT included. Install separately or use make release-p
 Quick start
 -----------
 1. Copy env.example to .env and set provider API keys.
-2. Edit config/gateway.yaml and config/chimera-broker.config.json as needed.
+2. Edit config/chimera.yaml and config/chimera-broker.config.json as needed.
 3. Copy config/api-keys.example.yaml to config/api-keys.yaml when you are ready for client tokens.
 4. Run ./chimera-gateway -version then start the stack, e.g.:
      ./chimera-supervisor

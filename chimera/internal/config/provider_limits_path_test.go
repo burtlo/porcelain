@@ -7,21 +7,22 @@ import (
 	"testing"
 )
 
-func TestLoadGatewayYAML_providerLimits_defaultPath_missingFile_emptySpec(t *testing.T) {
+func TestLoadChimeraYAML_providerLimits_defaultPath_missingFile_emptySpec(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "config", "gateway.yaml")
+	gw := filepath.Join(dir, "config", "chimera.yaml")
 	if err := os.MkdirAll(filepath.Dir(gw), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	raw := strings.TrimSpace(`
-gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 `)
 	if err := os.WriteFile(gw, []byte(raw+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,10 +35,10 @@ paths: { tokens: "./t.yaml" }
 	}
 }
 
-func TestLoadGatewayYAML_providerLimits_parsesSiblingFile(t *testing.T) {
+func TestLoadChimeraYAML_providerLimits_parsesSiblingFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	gw := filepath.Join(dir, "config", "gateway.yaml")
+	gw := filepath.Join(dir, "config", "chimera.yaml")
 	if err := os.MkdirAll(filepath.Dir(gw), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -52,13 +53,14 @@ providers:
 		t.Fatal(err)
 	}
 	raw := `
-gateway: { listen_port: 3000 }
-paths: { tokens: "./t.yaml" }
+gateway:
+  listen_port: 3000
+  auth: { api_keys: "./t.yaml" }
 `
 	if err := os.WriteFile(gw, []byte(raw), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	res, err := LoadGatewayYAML(gw, nil)
+	res, err := LoadChimeraYAML(gw, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

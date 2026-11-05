@@ -160,6 +160,34 @@ func TestChatMessages_renderMessage_assistantCopyInHead(t *testing.T) {
 	}
 }
 
+func TestChatMessages_renderMessage_turnDetailsFromHarnessSummary(t *testing.T) {
+	vm := goja.New()
+	loadChatMessages(t, vm)
+
+	out, err := vm.RunString(`
+		ChimeraChat.Render.Messages.renderMessage({
+			id: "a-harness",
+			role: "assistant",
+			content: "done",
+			harnessSummary: {
+				intent: { task_type: "code", domain: "repository", complexity: "medium", tags: ["workspace"] },
+				retrieval: { ran: true, hits_count: 4, compress_strategy: "summarize" },
+				execution: { resolved_model_id: "groq/free" },
+				evaluation: { ran: true, recommend_escalation: false }
+			}
+		})
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	for _, want := range []string{"chat-turn-details", "Turn details", "RAG", "4 hits", "groq/free", "summarize"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in %q", want, got)
+		}
+	}
+}
+
 func TestChatSnippet_render_gutterLineNumbersAndMidLine(t *testing.T) {
 	vm := goja.New()
 	loadChatMarkdown(t, vm)

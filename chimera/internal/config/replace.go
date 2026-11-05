@@ -46,24 +46,24 @@ func ReplaceFile(path string, data []byte, perm fs.FileMode) error {
 	return nil
 }
 
-// CommitRoutingAndGateway writes routing policy then gateway.yaml. If the gateway write fails,
+// CommitRoutingAndChimera writes routing policy then chimera.yaml. If the chimera write fails,
 // the routing file is restored to its previous contents (or removed if it did not exist).
-func CommitRoutingAndGateway(routePath string, routeData []byte, routePerm fs.FileMode, gwPath string, gwData []byte, gwPerm fs.FileMode) error {
+func CommitRoutingAndChimera(routePath string, routeData []byte, routePerm fs.FileMode, chimeraPath string, chimeraData []byte, chimeraPerm fs.FileMode) error {
 	oldRoute, errR := os.ReadFile(routePath)
 	routeExisted := errR == nil
 
 	if err := ReplaceFile(routePath, routeData, routePerm); err != nil {
 		return fmt.Errorf("write routing policy: %w", err)
 	}
-	if err := ReplaceFile(gwPath, gwData, gwPerm); err != nil {
+	if err := ReplaceFile(chimeraPath, chimeraData, chimeraPerm); err != nil {
 		if routeExisted {
 			if rerr := ReplaceFile(routePath, oldRoute, routePerm); rerr != nil {
-				return fmt.Errorf("gateway write failed and routing rollback failed: gw=%v; rollback=%v", err, rerr)
+				return fmt.Errorf("chimera yaml write failed and routing rollback failed: chimera=%v; rollback=%v", err, rerr)
 			}
 		} else {
 			_ = os.Remove(routePath)
 		}
-		return fmt.Errorf("write gateway.yaml (routing reverted): %w", err)
+		return fmt.Errorf("write chimera.yaml (routing reverted): %w", err)
 	}
 	return nil
 }

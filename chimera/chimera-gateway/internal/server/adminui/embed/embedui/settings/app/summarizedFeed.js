@@ -390,7 +390,7 @@ globalThis.ChimeraSettings.App.mountSummarizedFeed = function (ctx) {
     buildGatewayOverviewCardHtml: ctx.buildGatewayOverviewCardHtml,
     buildAdminUsersCardHtml: ctx.buildAdminUsersCardHtml,
     buildAdminProviderCardHtml: ctx.buildAdminProviderCardHtml,
-    buildVirtualModelCardHtml: ctx.buildVirtualModelCardHtml,
+    buildAssistantCardHtml: ctx.buildAssistantCardHtml,
     buildConvCard: ctx.buildConvCard,
     buildServiceCard: ctx.buildServiceCard,
     buildIndexerCard: ctx.buildIndexerCard,
@@ -418,8 +418,8 @@ globalThis.ChimeraSettings.App.mountSummarizedFeed = function (ctx) {
       scheduleStoryRebuild: scheduleStoryRebuild
     });
   }
-  if (globalThis.ChimeraSettings.Api && typeof ChimeraSettings.Api.mountVirtualModelsApi === "function") {
-    ChimeraSettings.Api.mountVirtualModelsApi(ctx, {});
+  if (globalThis.ChimeraSettings.Api && typeof ChimeraSettings.Api.mountAssistantsApi === "function") {
+    ChimeraSettings.Api.mountAssistantsApi(ctx, {});
   }
   if (globalThis.ChimeraSettings.Api && typeof ChimeraSettings.Api.mountProviderModelsApi === "function") {
     ChimeraSettings.Api.mountProviderModelsApi(ctx, {
@@ -461,7 +461,7 @@ globalThis.ChimeraSettings.App.mountSummarizedFeed = function (ctx) {
   ctx.patchAdminUsersCard = patchMod.patchAdminUsersCard;
   ctx.patchAdminProviderCard = patchMod.patchAdminProviderCard;
   ctx.syncSummarizedModelCache = syncSummarizedModelCache;
-  ctx.removeVirtualModelFromSummarizedFeed = patchMod.removeVirtualModelFromSummarizedFeed;
+  ctx.removeAssistantFromSummarizedFeed = patchMod.removeAssistantFromSummarizedFeed;
   ctx.refreshAdminCardAfterEditToggle = refreshAdminCardAfterEditToggle;
   ctx.patchAdminCardsFromPoll = patchMod.patchAdminCardsFromPoll;
   ctx.fetchGatewayMetrics = pollMod.fetchGatewayMetrics;
@@ -471,7 +471,7 @@ globalThis.ChimeraSettings.App.mountSummarizedFeed = function (ctx) {
   ctx.syncMetricsPolling = pollMod.syncMetricsPolling;
   ctx.syncUiStatePolling = pollMod.syncUiStatePolling;
   ctx.syncChimeraBrokerProviderPolling = pollMod.syncChimeraBrokerProviderPolling;
-  ctx.patchVirtualModelCard = patchMod.patchVirtualModelCard;
+  ctx.patchAssistantCard = patchMod.patchAssistantCard;
   ctx.adminSetMessage = adminSetMessage;
   ctx.markUiUnauthorized = pollMod.markUiUnauthorized;
   ctx.stopSummarizedPolling = pollMod.stopSummarizedPolling;

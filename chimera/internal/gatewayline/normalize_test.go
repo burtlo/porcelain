@@ -88,7 +88,7 @@ func TestNormalizePayloadPlainHasTimestamp(t *testing.T) {
 }
 
 func TestNormalizePayloadStartupListeningPreservesKV(t *testing.T) {
-	raw := `{"time":"2026-05-14T12:00:00Z","level":"INFO","msg":"gateway.startup.listening","addr":":8080","broker":"http://127.0.0.1:8081","config":"/cfg/gateway.yaml","vectorstore_supervised":true,"indexer_supervised":false,"timeline_kind":"gateway"}`
+	raw := `{"time":"2026-05-14T12:00:00Z","level":"INFO","msg":"gateway.startup.listening","addr":":8080","broker":"http://127.0.0.1:8081","config":"/cfg/chimera.yaml","vectorstore_supervised":true,"indexer_supervised":false,"timeline_kind":"gateway"}`
 	b := NormalizePayload(raw)
 	var m map[string]any
 	if err := json.Unmarshal(b, &m); err != nil {
@@ -100,7 +100,7 @@ func TestNormalizePayloadStartupListeningPreservesKV(t *testing.T) {
 	if m["broker"] != "http://127.0.0.1:8081" {
 		t.Fatalf("broker=%v", m["broker"])
 	}
-	if m["config"] != "/cfg/gateway.yaml" {
+	if m["config"] != "/cfg/chimera.yaml" {
 		t.Fatalf("config=%v", m["config"])
 	}
 	if m["timeline_kind"] != "gateway" {

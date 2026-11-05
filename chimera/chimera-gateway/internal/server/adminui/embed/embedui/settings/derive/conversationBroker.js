@@ -26,8 +26,8 @@ function conversationBrokerTimelineFlat(flat) {
   if (msg === "chat.routing.resolved") return true;
   if (msg === "chat.provider_limits.blocked") return true;
 
-  if (ml.indexOf("virtual model fallback attempt") >= 0) return true;
-  if (ml.indexOf("virtual model routing resolved") >= 0) return true;
+  if (ml.indexOf("assistant fallback attempt") >= 0) return true;
+  if (ml.indexOf("assistant routing resolved") >= 0) return true;
   if (ml.indexOf("chat blocked by provider limits") >= 0) return true;
   if (ml.indexOf("skipping upstream model (provider limits)") >= 0) return true;
 

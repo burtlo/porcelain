@@ -21,7 +21,7 @@ globalThis.ChimeraSettings.Summarized.mountModelGlue = function (ctx, bridge) {
       tokenListCache: ctx.tokenListCache,
       workspaceDrafts: ctx.workspaceDrafts,
       adminProviderSpecs: adminProviderSpecsFromVisible(),
-      virtualModelDrafts: ctx.virtualModelDrafts,
+      assistantDrafts: ctx.assistantDrafts,
       adminProviderModelsEditingId: ctx.adminProviderModelsEditingId,
       workspaceManagedEditId: ctx.workspaceManagedEditId,
       lastIndexerOperatorWorkspacesNested: ctx.lastIndexerOperatorWorkspacesNested
@@ -138,17 +138,17 @@ globalThis.ChimeraSettings.Summarized.mountModelGlue = function (ctx, bridge) {
         return true;
       },
       adminProvidersSectionBreakHtml: ctx.buildAdminProvidersSectionBreakHtml,
-      virtualModelsSectionBreakHtml: function (count) {
-        if (typeof ctx.buildVirtualModelsSectionBreakHtml === "function") {
-          return ctx.buildVirtualModelsSectionBreakHtml(count);
+      assistantsSectionBreakHtml: function (count) {
+        if (typeof ctx.buildAssistantsSectionBreakHtml === "function") {
+          return ctx.buildAssistantsSectionBreakHtml(count);
         }
-        if (typeof ctx.buildVirtualModelsSectionIntroHtml === "function") {
+        if (typeof ctx.buildAssistantsSectionIntroHtml === "function") {
           return (
-            '<div class="sum-section-label sum-feed-section-title">Virtual models</div>' +
-            ctx.buildVirtualModelsSectionIntroHtml(count)
+            '<div class="sum-section-label sum-feed-section-title">Assistants</div>' +
+            ctx.buildAssistantsSectionIntroHtml(count)
           );
         }
-        return '<div class="sum-section-label sum-feed-section-title">Virtual models</div>';
+        return '<div class="sum-section-label sum-feed-section-title">Assistants</div>';
       }
     };
   }
@@ -165,11 +165,11 @@ globalThis.ChimeraSettings.Summarized.mountModelGlue = function (ctx, bridge) {
         return ctx.buildAdminUsersCardHtml();
       case "admin-provider":
         return ctx.buildAdminProviderCardHtml(src.spec.id, src.spec.title, src.spec.avatar, src.spec.subtitle);
-      case "virtual-model":
-        return typeof ctx.buildVirtualModelCardHtml === "function" ? ctx.buildVirtualModelCardHtml(src.vm) : null;
-      case "virtual-model-draft":
-        return typeof ctx.buildVirtualModelDraftCardHtml === "function"
-          ? ctx.buildVirtualModelDraftCardHtml(src.draft)
+      case "assistant":
+        return typeof ctx.buildAssistantCardHtml === "function" ? ctx.buildAssistantCardHtml(src.vm) : null;
+      case "assistant-draft":
+        return typeof ctx.buildAssistantDraftCardHtml === "function"
+          ? ctx.buildAssistantDraftCardHtml(src.draft)
           : null;
       case "conversation":
         return ctx.buildConvCard(src);

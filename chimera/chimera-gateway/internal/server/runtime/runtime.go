@@ -9,15 +9,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/assistant"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/corpusstale"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/gatewaymetrics"
+	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/mcpmgr"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/operatorstore"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/providermodels"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/rag"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/rag/ragembed"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/server/catalog"
 	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/vectorstore/qdrant"
-	"github.com/lynn/porcelain/chimera/chimera-gateway/internal/virtualmodel"
 	indexeradapter "github.com/lynn/porcelain/chimera/chimera-indexer/adapter"
 	"github.com/lynn/porcelain/chimera/internal/config"
 	"github.com/lynn/porcelain/chimera/internal/providerlimits"
@@ -29,7 +30,7 @@ import (
 // Runtime mirrors src/runtime.ts RuntimeState.
 type Runtime struct {
 	log                   *slog.Logger
-	gatewayPath           string
+	chimeraYAMLPath       string
 	mu                    sync.RWMutex
 	gatewayMtime          time.Time
 	freeTierMtime         time.Time
@@ -37,7 +38,7 @@ type Runtime struct {
 	tokens                *tokens.Store
 	metrics               *gatewaymetrics.Store // optional; nil when disabled or init failed
 	operator              *operatorstore.Store  // optional; nil when init failed
-	virtualModels         *virtualmodel.Registry
+	assistants            *assistant.Registry
 	providerModels        *providermodels.Registry
 	brokerBaseURLOverride string // non-empty: after each yaml load, patch broker base + health (supervised chimera-broker)
 
@@ -67,6 +68,8 @@ type Runtime struct {
 	indexerStatus   IndexerSupervisorStatus
 
 	corpusStaleStore *corpusstale.Store
+
+	mcpMgr *mcpmgr.Manager
 }
 
 // IndexerSupervisorStatus is the gateway-owned view of supervised indexer process health.
@@ -81,18 +84,18 @@ type IndexerSupervisorStatus struct {
 	UpdatedAt       time.Time
 }
 
-func NewRuntime(gatewayPath string, log *slog.Logger) (*Runtime, error) {
-	return NewRuntimeWithBrokerOverride(gatewayPath, log, "")
+func NewRuntime(chimeraYAMLPath string, log *slog.Logger) (*Runtime, error) {
+	return NewRuntimeWithBrokerOverride(chimeraYAMLPath, log, "")
 }
 
 // NewRuntimeWithBrokerOverride loads gateway config; if brokerBaseURLOverride is set (e.g. http://127.0.0.1:8080),
 // it replaces upstream.base_url and health probe URL on every reload (supervised chimera-broker).
-func NewRuntimeWithBrokerOverride(gatewayPath string, log *slog.Logger, brokerBaseURLOverride string) (*Runtime, error) {
-	res, err := config.LoadGatewayYAML(gatewayPath, log)
+func NewRuntimeWithBrokerOverride(chimeraYAMLPath string, log *slog.Logger, brokerBaseURLOverride string) (*Runtime, error) {
+	res, err := config.LoadChimeraYAML(chimeraYAMLPath, log)
 	if err != nil {
 		return nil, err
 	}
-	res, err = config.EnsureGeneratedUpstreamAPIKey(gatewayPath, res, log)
+	res, err = config.EnsureGeneratedUpstreamAPIKey(chimeraYAMLPath, res, log)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +103,15 @@ func NewRuntimeWithBrokerOverride(gatewayPath string, log *slog.Logger, brokerBa
 		res = config.CloneResolved(res)
 		config.PatchResolvedUpstream(res, brokerBaseURLOverride)
 	}
+	if res.IndexerEnabled {
+		if _, err := config.MaterializeIndexerConfig(res); err != nil && log != nil {
+			log.Warn("indexer config materialize failed", "msg", "gateway.indexer.materialize_failed", "err", err)
+		}
+	}
 	rt := &Runtime{
 		corpusStaleStore:      corpusstale.NewStore(),
 		log:                   log,
-		gatewayPath:           gatewayPath,
+		chimeraYAMLPath:       chimeraYAMLPath,
 		brokerBaseURLOverride: brokerBaseURLOverride,
 		resolved:              res,
 		tokens:                tokens.NewStore(res.TokensPath, log),
@@ -129,14 +137,14 @@ func NewRuntimeWithBrokerOverride(gatewayPath string, log *slog.Logger, brokerBa
 		if err := operatorstore.ImportSupervisedYAMLRootsIfEmpty(context.Background(), s, "", res.IndexerSupervisedConfigPath, log); err != nil && log != nil {
 			log.Warn("legacy supervised roots import failed", "msg", "gateway.operator.workspaces_import_failed", "err", err)
 		}
-		if err := operatorstore.BootstrapVirtualModels(context.Background(), s, res, log); err != nil {
+		if err := operatorstore.BootstrapAssistants(context.Background(), s, res, log); err != nil {
 			if log != nil {
-				log.Warn("virtual model bootstrap failed", "msg", "gateway.virtual_model.bootstrap_failed", "err", err)
+				log.Warn("assistant bootstrap failed", "msg", naming.MsgGatewayAssistantBootstrapFailed, "err", err)
 			}
 		} else {
-			rt.virtualModels = virtualmodel.NewRegistry()
-			if err := rt.virtualModels.Reload(context.Background(), s); err != nil && log != nil {
-				log.Warn("virtual model registry reload failed", "msg", "gateway.virtual_model.reload_failed", "err", err)
+			rt.assistants = assistant.NewRegistry()
+			if err := rt.assistants.Reload(context.Background(), s); err != nil && log != nil {
+				log.Warn("assistant registry reload failed", "msg", naming.MsgGatewayAssistantReloadFailed, "err", err)
 			}
 		}
 		rt.providerModels = providermodels.NewRegistry()
@@ -154,7 +162,8 @@ func NewRuntimeWithBrokerOverride(gatewayPath string, log *slog.Logger, brokerBa
 			rt.rag = s
 		}
 	}
-	if st, err := os.Stat(gatewayPath); err == nil {
+	rt.reloadMCPLocked(context.Background())
+	if st, err := os.Stat(chimeraYAMLPath); err == nil {
 		rt.gatewayMtime = st.ModTime()
 	}
 	if res != nil && res.ProviderFreeTierPath != "" {
@@ -178,10 +187,10 @@ func (rt *Runtime) Sync() {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 
-	gst, err := os.Stat(rt.gatewayPath)
+	gst, err := os.Stat(rt.chimeraYAMLPath)
 	if err != nil {
 		if rt.log != nil {
-			rt.log.Error("gateway config missing", "msg", "gateway.config.missing", "path", rt.gatewayPath, "err", err)
+			rt.log.Error("gateway config missing", "msg", "gateway.config.missing", "path", rt.chimeraYAMLPath, "err", err)
 		}
 		return
 	}
@@ -200,10 +209,10 @@ func (rt *Runtime) Sync() {
 	}
 
 	prev := rt.resolved
-	next, err := config.LoadGatewayYAML(rt.gatewayPath, rt.log)
+	next, err := config.LoadChimeraYAML(rt.chimeraYAMLPath, rt.log)
 	if err != nil {
 		if rt.log != nil {
-			rt.log.Error("failed to reload gateway config", "msg", "gateway.config.reload_failed", "path", rt.gatewayPath, "config_file", naming.GatewayConfigFileTarget, "err", err)
+			rt.log.Error("failed to reload chimera config", "msg", "gateway.config.reload_failed", "path", rt.chimeraYAMLPath, "config_file", naming.ChimeraConfigFileTarget, "err", err)
 		}
 		return
 	}
@@ -224,8 +233,13 @@ func (rt *Runtime) Sync() {
 	if ragServiceConfigChanged(prev, next) {
 		rt.rebuildRAGLocked()
 	}
+	if next.IndexerEnabled {
+		if _, err := config.MaterializeIndexerConfig(next); err != nil && rt.log != nil {
+			rt.log.Warn("indexer config materialize failed", "msg", "gateway.indexer.materialize_failed", "err", err)
+		}
+	}
 	if rt.log != nil {
-		rt.log.Info("reloaded gateway config", "msg", "gateway.config.reloaded", "path", rt.gatewayPath, "config_file", naming.GatewayConfigFileTarget)
+		rt.log.Info("reloaded chimera config", "msg", "gateway.config.reloaded", "path", rt.chimeraYAMLPath, "config_file", naming.ChimeraConfigFileTarget)
 	}
 }
 
@@ -235,11 +249,11 @@ func (rt *Runtime) Snapshot() (*config.Resolved, *tokens.Store) {
 	return rt.resolved, rt.tokens
 }
 
-// GatewayPath returns the on-disk gateway.yaml path loaded by this runtime.
-func (rt *Runtime) GatewayPath() string {
+// GatewayPath returns the on-disk chimera.yaml path loaded by this runtime.
+func (rt *Runtime) ChimeraYAMLPath() string {
 	rt.mu.RLock()
 	defer rt.mu.RUnlock()
-	return rt.gatewayPath
+	return rt.chimeraYAMLPath
 }
 
 func ragServiceConfigChanged(prev, next *config.Resolved) bool {
@@ -286,7 +300,7 @@ func (rt *Runtime) rebuildRAGLocked() {
 }
 
 // ReloadRAG rebuilds the in-memory RAG service from the current resolved config.
-// Call after mutating gateway.yaml when Sync may not yet observe a new mtime.
+// Call after mutating chimera.yaml when Sync may not yet observe a new mtime.
 func (rt *Runtime) ReloadRAG() {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -328,6 +342,13 @@ func (rt *Runtime) OperatorStore() *operatorstore.Store {
 	return rt.operator
 }
 
+// SetResolvedForTest assigns gateway resolved config (tests only).
+func (rt *Runtime) SetResolvedForTest(res *config.Resolved) {
+	rt.mu.Lock()
+	rt.resolved = res
+	rt.mu.Unlock()
+}
+
 // SetOperatorStoreForTest assigns the operator SQLite store (tests only).
 func (rt *Runtime) SetOperatorStoreForTest(store *operatorstore.Store) {
 	rt.mu.Lock()
@@ -335,37 +356,37 @@ func (rt *Runtime) SetOperatorStoreForTest(store *operatorstore.Store) {
 	rt.operator = store
 }
 
-// VirtualModels returns the in-memory virtual model registry, or nil when operator store is unavailable.
-// PrimaryVirtualModelID returns the first enabled virtual model id from operator SQLite, or "".
-func (rt *Runtime) PrimaryVirtualModelID() string {
+// Assistants returns the in-memory assistant registry, or nil when operator store is unavailable.
+// PrimaryAssistantID returns the first enabled assistant id from operator SQLite, or "".
+func (rt *Runtime) PrimaryAssistantID() string {
 	if rt == nil {
 		return ""
 	}
-	if reg := rt.VirtualModels(); reg != nil {
+	if reg := rt.Assistants(); reg != nil {
 		return reg.BootstrapModelID()
 	}
 	return ""
 }
 
-func (rt *Runtime) VirtualModels() *virtualmodel.Registry {
+func (rt *Runtime) Assistants() *assistant.Registry {
 	rt.mu.RLock()
 	defer rt.mu.RUnlock()
-	return rt.virtualModels
+	return rt.assistants
 }
 
-// ReloadVirtualModels refreshes the registry from operator SQLite and bumps revision.
-func (rt *Runtime) ReloadVirtualModels(ctx context.Context) error {
+// ReloadAssistants refreshes the registry from operator SQLite and bumps revision.
+func (rt *Runtime) ReloadAssistants(ctx context.Context) error {
 	rt.mu.RLock()
 	store := rt.operator
-	reg := rt.virtualModels
+	reg := rt.assistants
 	rt.mu.RUnlock()
 	if store == nil {
 		return nil
 	}
 	if reg == nil {
-		reg = virtualmodel.NewRegistry()
+		reg = assistant.NewRegistry()
 		rt.mu.Lock()
-		rt.virtualModels = reg
+		rt.assistants = reg
 		rt.mu.Unlock()
 	}
 	return reg.Reload(ctx, store)
@@ -555,6 +576,23 @@ func (rt *Runtime) CloseMetrics() {
 	if rt.metrics != nil {
 		_ = rt.metrics.Close()
 		rt.metrics = nil
+	}
+}
+
+// MCPManager returns the gateway MCP server manager when configured.
+func (rt *Runtime) MCPManager() *mcpmgr.Manager {
+	rt.mu.RLock()
+	defer rt.mu.RUnlock()
+	return rt.mcpMgr
+}
+
+// CloseMCP stops MCP child processes (tests and graceful shutdown).
+func (rt *Runtime) CloseMCP() {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	if rt.mcpMgr != nil {
+		rt.mcpMgr.Stop()
+		rt.mcpMgr = nil
 	}
 }
 

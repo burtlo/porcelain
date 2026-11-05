@@ -1,0 +1,14 @@
+-- Upgrade path for operator DBs created before the virtual-model → assistant rename.
+--
+-- Fresh installs already have assistants/* tables from 000002_assistants.sql; SQLite
+-- lacks IF NOT EXISTS for RENAME TABLE, so version 11 is applied conditionally in Go
+-- (operatorstore.applyRenameVirtualModelsToAssistants) when virtual_models exists.
+--
+-- When the legacy table is present, the migration performs:
+--   virtual_models → assistants
+--   virtual_model_fallback → assistant_fallback (virtual_model_id → assistant_id)
+--   virtual_model_routing_policy → assistant_routing_policy
+--   virtual_model_tool_router → assistant_tool_router
+--   virtual_model_rule_bindings → assistant_rule_bindings
+--   virtual_model_harness_modules → assistant_harness_modules (when present)
+-- and recreates indexes under assistant_* names where legacy idx_virtual_* / idx_vm_* exist.

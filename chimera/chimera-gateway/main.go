@@ -76,7 +76,7 @@ Flags:
 	fs.SetOutput(os.Stdout)
 	_ = fs.String("listen", "", "Wrapper listen address (default: 127.0.0.1:7720)")
 	_ = fs.String("bin", "", "Gateway backend binary path")
-	_ = fs.String("config", "", "Path to "+naming.GatewayConfigFileTarget+" (default: $"+naming.EnvGatewayConfigTarget+" or ./"+naming.DefaultGatewayConfigRelPath+")")
+	_ = fs.String("config", "", "Path to "+naming.ChimeraConfigFileTarget+" (default: $"+naming.EnvChimeraConfigTarget+" or ./"+naming.DefaultChimeraConfigRelPath+")")
 	_ = fs.String("gateway-listen", "", "Backend listen override passed to gateway binary")
 	fs.PrintDefaults()
 }
@@ -107,7 +107,7 @@ func parseConfig(args []string) (gatewayConfig, error) {
 	var showVersion bool
 	fs.StringVar(&cfg.Listen, "listen", envOrDefault(naming.EnvGatewayListen, naming.DefaultGatewayListen), "wrapper listen addr (host:port)")
 	fs.StringVar(&cfg.Bin, "bin", envOrDefault(naming.EnvGatewayBin, defaultGatewayBackendBin()), "gateway backend binary path")
-	fs.StringVar(&cfg.ConfigPath, "config", envOrDefault(naming.EnvGatewayConfigTarget, ""), "path to "+naming.GatewayConfigFileTarget)
+	fs.StringVar(&cfg.ConfigPath, "config", envOrDefault(naming.EnvChimeraConfigTarget, ""), "path to "+naming.ChimeraConfigFileTarget)
 	fs.StringVar(&cfg.GatewayListen, "gateway-listen", envOrDefault(naming.EnvGatewayBackendListen, ""), "backend listen override")
 	fs.StringVar(&cfg.BrokerOverride, "broker-override", envOrDefault(naming.EnvGatewayBrokerOverride, ""), "override chimera-broker base URL for backend runtime")
 	fs.DurationVar(&cfg.StartupTimeout, "startup-timeout", envDuration(naming.EnvGatewayTimeoutsStartup, contract.DefaultStartupTimeout), "startup readiness timeout")
@@ -186,12 +186,12 @@ func (a *gatewayAdapter) Start(ctx context.Context, capture io.Writer, log *slog
 	path := strings.TrimSpace(a.cfg.ConfigPath)
 	if path == "" {
 		var err error
-		path, err = config.ResolveGatewayConfigPath()
+		path, err = config.ResolveChimeraConfigPath()
 		if err != nil {
 			return nil, err
 		}
 	}
-	res, err := config.LoadGatewayYAML(path, log)
+	res, err := config.LoadChimeraYAML(path, log)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func (a *gatewayAdapter) ReadyURL() string {
 	if path == "" {
 		return "http://127.0.0.1:3000/healthz"
 	}
-	res, err := config.LoadGatewayYAML(path, nil)
+	res, err := config.LoadChimeraYAML(path, nil)
 	if err != nil {
 		return "http://127.0.0.1:3000/healthz"
 	}
@@ -259,7 +259,7 @@ func (a *gatewayAdapter) MetricsURL() string {
 	if path == "" {
 		return ""
 	}
-	res, err := config.LoadGatewayYAML(path, nil)
+	res, err := config.LoadChimeraYAML(path, nil)
 	if err != nil {
 		return ""
 	}
@@ -342,10 +342,10 @@ func useEmbeddedBackend(bin string) bool {
 func runGatewayBackend(args []string) error {
 	fs := flag.NewFlagSet("chimera-gateway-backend", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	cfgPath := envOrDefault(naming.EnvGatewayConfigTarget, "")
+	cfgPath := envOrDefault(naming.EnvChimeraConfigTarget, "")
 	listen := ""
 	brokerOverride := ""
-	fs.StringVar(&cfgPath, "config", cfgPath, "path to "+naming.GatewayConfigFileTarget)
+	fs.StringVar(&cfgPath, "config", cfgPath, "path to "+naming.ChimeraConfigFileTarget)
 	fs.StringVar(&listen, "listen", "", "listen override")
 	fs.StringVar(&brokerOverride, "broker-override", envOrDefault(naming.EnvGatewayBrokerOverride, ""), "chimera-broker base URL override")
 	if err := fs.Parse(args); err != nil {
@@ -353,7 +353,7 @@ func runGatewayBackend(args []string) error {
 	}
 	if strings.TrimSpace(cfgPath) == "" {
 		var err error
-		cfgPath, err = config.ResolveGatewayConfigPath()
+		cfgPath, err = config.ResolveChimeraConfigPath()
 		if err != nil {
 			return err
 		}
@@ -380,6 +380,7 @@ func runGatewayBackend(args []string) error {
 		overlay.EffectiveListen = prim.String()
 		go func() {
 			<-rootCtx.Done()
+			rt.CloseMCP()
 			shCtx, cancel := context.WithTimeout(context.Background(), contract.DefaultShutdownTimeout)
 			defer cancel()
 			_ = shut(shCtx)
@@ -433,6 +434,7 @@ func runGatewayBackend(args []string) error {
 		})
 	go func() {
 		<-rootCtx.Done()
+		rt.CloseMCP()
 		shCtx, cancel := context.WithTimeout(context.Background(), contract.DefaultShutdownTimeout)
 		defer cancel()
 		_ = srv.Shutdown(shCtx)
@@ -453,7 +455,7 @@ func buildLoggerTo(w io.Writer, gatewayPath string) *slog.Logger {
 	if e := os.Getenv("LOG_LEVEL"); e != "" {
 		lvl = parseLogLevel(e)
 	} else {
-		res, err := config.LoadGatewayYAML(gatewayPath, nil)
+		res, err := config.LoadChimeraYAML(gatewayPath, nil)
 		if err == nil {
 			lvl = parseLogLevel(res.LogLevel)
 		}

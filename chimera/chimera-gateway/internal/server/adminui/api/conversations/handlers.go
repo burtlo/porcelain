@@ -264,6 +264,9 @@ func turnWire(t operatorstore.ConversationTurn) operatorapi.ConversationTurn {
 			})
 		}
 	}
+	if s := strings.TrimSpace(t.HarnessSummaryJSON); s != "" && json.Valid([]byte(s)) {
+		out.HarnessSummary = json.RawMessage(s)
+	}
 	return out
 }
 
