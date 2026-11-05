@@ -23,6 +23,14 @@
 
 ---
 
+## Priority — assistant reset
+
+| Plan | Summary |
+|------|---------|
+| [assistant-reliability-reset.md](assistant-reliability-reset.md) | Contract, failure tests, accurate local models, structured output, outcome-based eval; pauses new harness features |
+
+---
+
 ## Version 0.4 — assistant turn harness (execution plans)
 
 Linked from [`version-v0.4.md`](../version-v0.4.md). These plans stay in the open tree as delivery history and acceptance references even though most phases are `done`.
