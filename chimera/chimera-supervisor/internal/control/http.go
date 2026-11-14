@@ -149,6 +149,7 @@ func Handler(state *State, logStore *servicelogs.Store, onShutdown func()) http.
 					"endpoint": s.EmbedEndpoint,
 				},
 			},
+			"local_models": s.LocalModels,
 		}
 		payload := contract.StatusPayload{
 			Component:   contract.ComponentSupervisor,

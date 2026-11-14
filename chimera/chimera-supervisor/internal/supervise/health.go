@@ -33,6 +33,8 @@ func waitHealthy(ctx context.Context, healthURL string, timeout time.Duration, l
 			if res.StatusCode >= 200 && res.StatusCode < 300 {
 				if log != nil {
 					switch child {
+					case "chimera-llm":
+						log.Info("chimera-llm health OK", "msg", "chimera-supervisor.chimera-llm.ready", "url", healthURL)
 					case "chimera-embed":
 						log.Info("chimera-embed health OK", "msg", "chimera-supervisor.chimera-embed.ready", "url", healthURL)
 					case "chimera-vectorstore":

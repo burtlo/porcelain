@@ -164,7 +164,7 @@ func startEmbedChild(cfg svconfig.Config, res *gwconfig.Resolved, endpoint, cont
 	return nil
 }
 
-func startBrokerChild(cfg svconfig.Config, res *gwconfig.Resolved, controlBaseURL string, logStore *servicelogs.Store, logLevel slog.Level, log *slog.Logger, controlState *control.State, brokerProc **exec.Cmd, brokerWaitErr *chan error, brokerReadyzURL string, vectorstoreWait chan error, stopChildrenFast func()) error {
+func startBrokerChild(cfg svconfig.Config, res *gwconfig.Resolved, brokerConfigPath, controlBaseURL string, logStore *servicelogs.Store, logLevel slog.Level, log *slog.Logger, controlState *control.State, brokerProc **exec.Cmd, brokerWaitErr *chan error, brokerReadyzURL string, vectorstoreWait chan error, stopChildrenFast func()) error {
 	brokerBackendBin := svconfig.DefaultBifrostBin()
 	brokerLogLevel := ""
 	if res != nil {
@@ -177,7 +177,11 @@ func startBrokerChild(cfg svconfig.Config, res *gwconfig.Resolved, controlBaseUR
 		"-data-path", strings.TrimSpace(cfg.BrokerDataDir),
 	}), brokerLogLevel)
 	cmd := exec.Command(strings.TrimSpace(cfg.BrokerBin), brokerArgs...)
-	cmd.Env = mergeEnv(ChildEnv(controlBaseURL))
+	brokerEnv := ChildEnv(controlBaseURL)
+	if p := strings.TrimSpace(brokerConfigPath); p != "" {
+		brokerEnv[naming.EnvBrokerChimeraBrokerConfig] = p
+	}
+	cmd.Env = mergeEnv(brokerEnv)
 	proc.ApplyNoConsoleWindow(cmd)
 	brokerChildSink := LogSink(logStore.Writer(servicelogs.SourceChimeraBroker), brokeradapter.ChildLogWriter, logLevel)
 	cmd.Stdout = brokerChildSink

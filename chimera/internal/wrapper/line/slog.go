@@ -143,6 +143,8 @@ func IsDomainServiceMsg(msg, service string) bool {
 		return strings.HasPrefix(msg, "vectorstore.")
 	case "chimera-embed", "embed":
 		return strings.HasPrefix(msg, "embed.")
+	case "chimera-llm", "llm":
+		return strings.HasPrefix(msg, "llm.")
 	case "chimera-indexer", "indexer":
 		return strings.HasPrefix(msg, "indexer.")
 	case "chimera-supervisor":
@@ -159,6 +161,8 @@ func serviceFromComponent(component, defaultService string) string {
 		return "chimera-broker"
 	case strings.Contains(c, "vectorstore"), strings.Contains(c, "qdrant"):
 		return "chimera-vectorstore"
+	case strings.Contains(c, "chimera-llm"):
+		return "chimera-llm"
 	case strings.Contains(c, "embed"), strings.Contains(c, "llama-server"):
 		return "chimera-embed"
 	case strings.Contains(c, "supervisor"):

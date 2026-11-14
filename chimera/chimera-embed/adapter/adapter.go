@@ -11,7 +11,7 @@ import (
 
 	"github.com/lynn/porcelain/chimera/chimera-embed/internal/config"
 	"github.com/lynn/porcelain/chimera/chimera-embed/internal/embedline"
-	"github.com/lynn/porcelain/chimera/chimera-embed/internal/llamaserver"
+	"github.com/lynn/porcelain/chimera/internal/llamaserver"
 	"github.com/lynn/porcelain/chimera/internal/wrapper/contract"
 	"github.com/lynn/porcelain/internal/naming"
 )

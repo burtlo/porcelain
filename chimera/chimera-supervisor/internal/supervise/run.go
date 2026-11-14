@@ -132,6 +132,7 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 		brokerWaitErr   chan error
 		indexerProc     *exec.Cmd
 		indexerWait     chan error
+		localModels     []*localModelChild
 	)
 
 	indexerCtx, stopIndexer := context.WithCancel(ctx)
@@ -143,20 +144,22 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 			if cfg.TerminateWait > shutdownGrace {
 				shutdownGrace = cfg.TerminateWait
 			}
-			ShutdownChildren(log, shutdownGrace,
-				Child{Name: "gateway", Cmd: gatewayProc, WaitCh: gatewayWaitErr},
-				Child{Name: "vectorstore", Cmd: vectorstoreProc, WaitCh: vectorstoreWait},
-				Child{Name: "embed", Cmd: embedProc, WaitCh: embedWait},
-				Child{Name: "broker", Cmd: brokerProc, WaitCh: brokerWaitErr},
-				Child{Name: "indexer", Cmd: indexerProc, WaitCh: indexerWait},
-			)
+			llmChildren, _ := localModelShutdownChildren(localModels)
+			ShutdownChildren(log, shutdownGrace, append([]Child{
+				{Name: "gateway", Cmd: gatewayProc, WaitCh: gatewayWaitErr},
+				{Name: "vectorstore", Cmd: vectorstoreProc, WaitCh: vectorstoreWait},
+				{Name: "embed", Cmd: embedProc, WaitCh: embedWait},
+				{Name: "broker", Cmd: brokerProc, WaitCh: brokerWaitErr},
+				{Name: "indexer", Cmd: indexerProc, WaitCh: indexerWait},
+			}, llmChildren...)...)
 			log.Info("supervised shutdown complete", "msg", "chimera-supervisor.shutdown.children_done")
 		})
 	}
 	stopChildrenFast := func() {
 		supervisedShutdownOnce.Do(func() {
 			stopIndexer()
-			KillWrapperFamilies(gatewayProc, brokerProc, vectorstoreProc, embedProc)
+			_, llmCmds := localModelShutdownChildren(localModels)
+			KillWrapperFamilies(append([]*exec.Cmd{gatewayProc, brokerProc, vectorstoreProc, embedProc}, llmCmds...)...)
 		})
 	}
 
@@ -174,8 +177,22 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 				return err
 			}
 		}
+		if want[gwconfig.ServiceLocalModels] {
+			if strings.TrimSpace(cfg.LLMBin) == "" {
+				return svconfig.Exitf(1, "local_models configured but no chimera-llm wrapper was found (pass -llm-bin)")
+			}
+			localModels = startLocalModelChildren(cfg, res, controlBaseURL, logStore, logLevel, log, controlState)
+		}
+		brokerConfigPath := ""
+		if want[gwconfig.ServiceBroker] && want[gwconfig.ServiceLocalModels] {
+			p, merr := materializeBrokerConfig(brokerSeedConfigPath(), strings.TrimSpace(cfg.BrokerDataDir), res.LocalModels.Enabled())
+			if merr != nil {
+				return svconfig.Exitf(1, "materialize broker config: %v", merr)
+			}
+			brokerConfigPath = p
+		}
 		if want[gwconfig.ServiceBroker] {
-			if err := startBrokerChild(cfg, res, controlBaseURL, logStore, logLevel, log, controlState, &brokerProc, &brokerWaitErr, brokerReadyzURL, vectorstoreWait, stopChildrenFast); err != nil {
+			if err := startBrokerChild(cfg, res, brokerConfigPath, controlBaseURL, logStore, logLevel, log, controlState, &brokerProc, &brokerWaitErr, brokerReadyzURL, vectorstoreWait, stopChildrenFast); err != nil {
 				return err
 			}
 		}
@@ -214,6 +231,16 @@ func Run(ctx context.Context, cfg svconfig.Config, version, commit string) error
 	}
 	if embedReadyzURL != "" {
 		brokerclient.RunSupervisedChildHealthMonitor(rootCtx, log, "embed", embedReadyzURL, 15*time.Second, 30*time.Second, !cfg.NoWaitEmbed)
+	}
+	if len(localModels) > 0 {
+		monitorLocalModels(rootCtx, localModels, controlState, 15*time.Second)
+	}
+	if want[gwconfig.ServiceBroker] && !bootstrap {
+		go func() {
+			pctx, cancel := context.WithTimeout(rootCtx, 30*time.Second)
+			defer cancel()
+			pruneStaleLocalProviders(pctx, cfg.BrokerEndpoint, res.LocalModels.Enabled(), log)
+		}()
 	}
 	<-rootCtx.Done()
 	stopChildrenGraceful()
