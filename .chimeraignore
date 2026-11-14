@@ -1,0 +1,3 @@
+# Chimera indexer ignore rules (gitignore syntax), merged with .gitignore.
+# Claude Code worktrees duplicate the whole repo; keep them out of the search index.
+.claude/

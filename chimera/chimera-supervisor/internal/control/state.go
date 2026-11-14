@@ -25,6 +25,36 @@ type State struct {
 	embedEndpoint       string
 	operatorUIBaseURL   string
 	bootstrap           bool
+	localModels         []LocalModelStatus
+}
+
+// LocalModelStatus is the supervisor view of one supervised local chat model.
+type LocalModelStatus struct {
+	ID       string `json:"id"`
+	Provider string `json:"provider"`
+	ModelRef string `json:"model"`
+	Endpoint string `json:"endpoint"`
+	Listen   string `json:"listen"`
+	Required bool   `json:"required"`
+	Ready    bool   `json:"ready"`
+}
+
+// SetLocalModels registers the supervised local chat models (all not ready).
+func (s *State) SetLocalModels(models []LocalModelStatus) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.localModels = append([]LocalModelStatus(nil), models...)
+}
+
+// SetLocalModelReady updates readiness for one local model id.
+func (s *State) SetLocalModelReady(id string, v bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.localModels {
+		if s.localModels[i].ID == id {
+			s.localModels[i].Ready = v
+		}
+	}
 }
 
 // NewState returns an empty control-plane state.
@@ -127,6 +157,7 @@ type Snapshot struct {
 	EmbedEndpoint       string
 	OperatorUIBaseURL   string
 	Bootstrap           bool
+	LocalModels         []LocalModelStatus
 }
 
 func (s *State) Snapshot() Snapshot {
@@ -150,6 +181,7 @@ func (s *State) Snapshot() Snapshot {
 		EmbedEndpoint:       s.embedEndpoint,
 		OperatorUIBaseURL:   s.operatorUIBaseURL,
 		Bootstrap:           s.bootstrap,
+		LocalModels:         append([]LocalModelStatus(nil), s.localModels...),
 	}
 }
 
@@ -163,6 +195,11 @@ func ContractStatus(s Snapshot) string {
 	}
 	if s.EmbedRequired && !s.EmbedReady {
 		return "degraded"
+	}
+	for _, m := range s.LocalModels {
+		if m.Required && !m.Ready {
+			return "degraded"
+		}
 	}
 	return "ok"
 }

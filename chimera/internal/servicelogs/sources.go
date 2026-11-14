@@ -6,6 +6,7 @@ const (
 	SourceChimeraBroker      = "chimera-broker"
 	SourceChimeraVectorstore = "chimera-vectorstore"
 	SourceChimeraEmbed       = "chimera-embed"
+	SourceChimeraLLM         = "chimera-llm"
 	SourceChimeraIndexer     = "chimera-indexer"
 	SourceChimeraSupervisor  = "chimera-supervisor"
 )

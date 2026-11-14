@@ -45,6 +45,18 @@ func DefaultEmbedBin() string {
 	return naming.ProductEmbedName
 }
 
+// DefaultLLMBin resolves chimera-llm next to this executable or on PATH.
+func DefaultLLMBin() string {
+	dir := executableDir()
+	if p := binfind.FirstInExeDirs(dir, binfind.SearchNames(naming.ProductLLMName)); p != "" {
+		return p
+	}
+	if runtime.GOOS == "windows" {
+		return naming.ProductLLMName + ".exe"
+	}
+	return naming.ProductLLMName
+}
+
 // DefaultLlamaServerBin resolves the operator-supplied llama-server backend.
 func DefaultLlamaServerBin() string {
 	dir := executableDir()

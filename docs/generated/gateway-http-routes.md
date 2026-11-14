@@ -115,6 +115,6 @@ Auth values: **public** (no gateway token), **bearer** (gateway API token), **se
 | * | `/healthz` | public | `chimera\chimera-supervisor\internal\control\http.go:107` | chimera-supervisor control plane |
 | * | `/readyz` | public | `chimera\chimera-supervisor\internal\control\http.go:113` | chimera-supervisor control plane |
 | * | `/status` | public | `chimera\chimera-supervisor\internal\control\http.go:127` | chimera-supervisor control plane |
-| POST | `/shutdown` | public | `chimera\chimera-supervisor\internal\control\http.go:189` | chimera-supervisor control plane |
-| * | `/metrics` | public | `chimera\chimera-supervisor\internal\control\http.go:208` | chimera-supervisor control plane |
+| POST | `/shutdown` | public | `chimera\chimera-supervisor\internal\control\http.go:190` | chimera-supervisor control plane |
+| * | `/metrics` | public | `chimera\chimera-supervisor\internal\control\http.go:209` | chimera-supervisor control plane |
 

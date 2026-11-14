@@ -7,6 +7,7 @@ import (
 // chimeraDoc is the YAML shape for config/chimera.yaml.
 type chimeraDoc struct {
 	InternalEmbedding internalEmbeddingDoc `yaml:"internal_embedding"`
+	LocalModels       localModelsDoc       `yaml:"local_models"`
 	Supervisor        supervisorDoc        `yaml:"supervisor"`
 
 	Gateway struct {

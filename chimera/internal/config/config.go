@@ -55,6 +55,8 @@ type Resolved struct {
 	RAG RAG
 	// InternalEmbedding configures the opt-in supervised chimera-embed runtime.
 	InternalEmbedding InternalEmbedding
+	// LocalModels configures supervised llama-server chat models (one chimera-llm wrapper each).
+	LocalModels LocalModels
 
 	// Suite membership (enabled does not start processes).
 	GatewayEnabled     bool
@@ -136,6 +138,9 @@ func (r *Resolved) DefaultSupervisorServices() []string {
 	if r.VectorstoreEnabled {
 		out = append(out, ServiceVectorstore)
 	}
+	if len(r.LocalModels.Enabled()) > 0 {
+		out = append(out, ServiceLocalModels)
+	}
 	if r.BrokerEnabled {
 		out = append(out, ServiceBroker)
 	}
@@ -162,6 +167,7 @@ func (r *Resolved) ResolveSupervisorServices() ([]string, error) {
 		ServiceBroker:      r.BrokerEnabled,
 		ServiceVectorstore: r.VectorstoreEnabled,
 		ServiceIndexer:     r.IndexerEnabled,
+		ServiceLocalModels: len(r.LocalModels.Enabled()) > 0,
 	}
 	out := make([]string, 0, len(list))
 	seen := map[string]bool{}
@@ -173,6 +179,9 @@ func (r *Resolved) ResolveSupervisorServices() ([]string, error) {
 		ok, known := enabled[name]
 		if !known {
 			return nil, fmt.Errorf("supervisor.services: unknown service %q", raw)
+		}
+		if !ok && name == ServiceLocalModels {
+			return nil, fmt.Errorf("supervisor.services: %q is listed but no local_models.models entry is enabled", name)
 		}
 		if !ok {
 			return nil, fmt.Errorf("supervisor.services: %q is listed but %s.enabled is false", name, name)
@@ -355,6 +364,10 @@ func LoadChimeraYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		return nil, err
 	}
 	applyInternalEmbeddingToRAG(&rag, internalEmbedding)
+	localModels := doc.LocalModels.effective(baseDir)
+	if err := localModels.Validate(); err != nil {
+		return nil, err
+	}
 	if err := rag.Validate(); err != nil {
 		if log != nil {
 			log.Error("search config invalid; disabling search", "msg", "rag.config.invalid", "err", err)
@@ -437,6 +450,7 @@ func LoadChimeraYAML(filePath string, log *slog.Logger) (*Resolved, error) {
 		ProviderLimitsSpec:                    limitsSpec,
 		RAG:                                   rag,
 		InternalEmbedding:                     internalEmbedding,
+		LocalModels:                           localModels,
 		GatewayEnabled:                        gatewayEnabled,
 		BrokerEnabled:                         brokerEnabled,
 		VectorstoreEnabled:                    vectorstoreEnabled,

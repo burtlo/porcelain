@@ -19,6 +19,7 @@ Durable contracts for new binaries, wrappers, and cross-cutting integration — 
 | [Operator UI filesystem dev mode](operator-ui-filesystem-dev-mode.md) | `CHIMERA_ADMINUI_ROOT` serves embed UI from disk on loopback | Gateway embed assets | `current` |
 | [Gateway chat routing pipeline](gateway-chat-routing-pipeline.md) | Turn harness stages, tool router, per-assistant retrieval, policy pick, fallback loop | Gateway chat path | `current` |
 | [Internal embedding provider](internal-embedding-provider.md) | Opt-in supervised `chimera-embed` + `llama-server` for gateway RAG embeddings | Gateway, indexer health, supervisor | `current` |
+| [Local chat models](local-chat-models.md) | `local_models:` — supervised `chimera-llm` + `llama-server` per chat model, registered with the broker as `local-<id>` | Supervisor, broker, `chimera-llm` | `current` |
 | [Assistant harness internals](assistant-harness-internals.md) | Stage runner contract, envelope, generated stage order, harness evaluate dry-run | `internal/harness` | `current` |
 | [Gateway MCP tool backends](gateway-mcp-tool-backends.md) | MCP manager + composite `tool_executor`; operator SQLite/API + harness MCP panel (Phase 2c); blessed `fake_echo` ([sidecar catalog](../reference/mcp-sidecar-catalog.md)) | Gateway harness | `partial` |
 

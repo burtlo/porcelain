@@ -14,6 +14,7 @@ const (
 	ProductBifrostHTTPBinName    = "bifrost-http"        // BiFrost build artifact basename (install scripts)
 	ProductVectorstoreName       = "chimera-vectorstore"
 	ProductEmbedName             = "chimera-embed"
+	ProductLLMName               = "chimera-llm"
 	ProductLlamaServerBinName    = "llama-server"
 	ProductQdrantBinName         = "qdrant"
 	ProductGatewayBinName        = "chimera-gateway"
@@ -85,7 +86,8 @@ const (
 	EnvEmbedPooling          = "EMBED__POOLING"
 
 	// chimera-embed wrapper defaults.
-	DefaultEmbedListen     = "127.0.0.1:7750"
+	// 7750 belongs to the chimera-indexer wrapper; embed uses 7760.
+	DefaultEmbedListen     = "127.0.0.1:7760"
 	DefaultEmbedEndpoint   = "127.0.0.1:8090"
 	DefaultEmbedLogLevel   = "info"
 	DefaultEmbedDataPath   = "data/embedding"
@@ -94,6 +96,36 @@ const (
 	DefaultEmbedCtxSize    = 2048
 	DefaultEmbedNGPULayers = 0
 	DefaultEmbedPooling    = "mean"
+
+	// chimera-llm wrapper environment (LLM__*). One wrapper instance per local chat model.
+	EnvLLMListen           = "LLM__LISTEN"
+	EnvLLMBin              = "LLM__BIN"
+	EnvLLMBackend          = "LLM__BACKEND"
+	EnvLLMEndpoint         = "LLM__ENDPOINT"
+	EnvLLMModelID          = "LLM__MODEL_ID"
+	EnvLLMModelPath        = "LLM__MODEL_PATH"
+	EnvLLMMmprojPath       = "LLM__MMPROJ_PATH"
+	EnvLLMAlias            = "LLM__ALIAS"
+	EnvLLMCacheDir         = "LLM__CACHE_DIR"
+	EnvLLMCtxSize          = "LLM__CTX_SIZE"
+	EnvLLMNGPULayers       = "LLM__N_GPU_LAYERS"
+	EnvLLMNCPUMoE          = "LLM__N_CPU_MOE"
+	EnvLLMParallel         = "LLM__PARALLEL"
+	EnvLLMThinking         = "LLM__THINKING"
+	EnvLLMExtraArgs        = "LLM__EXTRA_ARGS" // JSON array of extra llama-server arguments
+	EnvLLMTimeoutsStartup  = "LLM__TIMEOUTS__STARTUP"
+	EnvLLMTimeoutsShutdown = "LLM__TIMEOUTS__SHUTDOWN"
+
+	// chimera-llm defaults. Wrapper listens default to DefaultLLMListenBasePort + index.
+	DefaultLLMListenHost     = "127.0.0.1"
+	DefaultLLMListenBasePort = 7770
+	DefaultLLMDataPath       = "data/llm"
+	DefaultLLMCtxSize        = 8192
+	DefaultLLMNGPULayers     = 99
+	DefaultLLMParallel       = 1
+
+	// LocalModelProviderPrefix prefixes the BiFrost provider generated for each local model ("local-<id>").
+	LocalModelProviderPrefix = "local-"
 
 	// Internal embedding provider identity used by gateway.yaml.
 	InternalEmbeddingProvider = "internal"

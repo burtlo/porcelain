@@ -41,6 +41,9 @@ type Config struct {
 	EmbedCacheDir       string
 	WaitEmbed           time.Duration
 	NoWaitEmbed         bool
+	LLMBin              string
+	LLMBackendBin       string
+	NoWaitLLM           bool
 	VectorstoreBin      string
 	VectorstoreListen   string
 	VectorstoreEndpoint string
@@ -110,6 +113,9 @@ func bindFlags(fs *flag.FlagSet, cfg *Config) {
 	fs.StringVar(&cfg.EmbedCacheDir, "embed-cache-dir", "", "llama-server working/cache directory override")
 	fs.DurationVar(&cfg.WaitEmbed, "wait-embed", 120*time.Second, "Max time to poll chimera-embed /readyz before exit")
 	fs.BoolVar(&cfg.NoWaitEmbed, "no-wait-embed", false, "Skip chimera-embed readiness poll")
+	fs.StringVar(&cfg.LLMBin, "llm-bin", DefaultLLMBin(), "chimera-llm wrapper binary (one instance per local_models entry)")
+	fs.StringVar(&cfg.LLMBackendBin, "llm-backend-bin", "", "llama-server binary for local chat models (default: local_models.llama_server_bin, then -embed-backend-bin)")
+	fs.BoolVar(&cfg.NoWaitLLM, "no-wait-llm", false, "Skip waiting for local chat models to load before starting the broker")
 	fs.StringVar(&cfg.VectorstoreBin, "vectorstore-bin", DefaultVectorstoreBin(), "chimera-vectorstore wrapper binary")
 	fs.StringVar(&cfg.VectorstoreListen, "vectorstore-listen", naming.DefaultVectorstoreListen, "chimera-vectorstore wrapper listen host:port")
 	fs.StringVar(&cfg.VectorstoreEndpoint, "vectorstore-endpoint", naming.DefaultVectorstoreEndpoint, "vectorstore backend endpoint host:port for chimera-vectorstore --endpoint")

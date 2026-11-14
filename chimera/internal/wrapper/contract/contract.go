@@ -13,6 +13,7 @@ const (
 	ComponentVectorstore = naming.ProductVectorstoreName
 	ComponentBroker      = naming.ProductBrokerName
 	ComponentEmbed       = naming.ProductEmbedName
+	ComponentLLM         = naming.ProductLLMName
 	ComponentSupervisor  = naming.ProductSupervisorName
 	ComponentGateway     = naming.ProductGatewayBinName
 	ComponentIndexer     = naming.ProductIndexerBinName
@@ -22,6 +23,7 @@ var AllowedComponents = map[string]struct{}{
 	ComponentVectorstore: {},
 	ComponentBroker:      {},
 	ComponentEmbed:       {},
+	ComponentLLM:         {},
 	ComponentSupervisor:  {},
 	ComponentGateway:     {},
 	ComponentIndexer:     {},
@@ -61,9 +63,11 @@ const (
 	DebugBrokerLogsPath              = "/debug/broker/logs"
 	DebugVectorstoreLogsPath         = "/debug/vectorstore/logs"
 	DebugEmbedLogsPath               = "/debug/embed/logs"
+	DebugLLMLogsPath                 = "/debug/llm/logs"
 	DebugEnableBrokerLogsEnvKey      = "DEBUG__ENABLE_BROKER_LOGS"
 	DebugEnableVectorstoreLogsEnvKey = "DEBUG__ENABLE_VECTORSTORE_LOGS"
 	DebugEnableEmbedLogsEnvKey       = "DEBUG__ENABLE_EMBED_LOGS"
+	DebugEnableLLMLogsEnvKey         = "DEBUG__ENABLE_LLM_LOGS"
 	DebugAllowRemoteEnv              = "DEBUG__ALLOW_REMOTE"
 	DebugAllowRemoteFlag             = "--debug-allow-remote"
 )
@@ -124,6 +128,8 @@ func DebugLogsPath(component string) string {
 		return DebugVectorstoreLogsPath
 	case ComponentEmbed:
 		return DebugEmbedLogsPath
+	case ComponentLLM:
+		return DebugLLMLogsPath
 	default:
 		return DebugBrokerLogsPath
 	}
@@ -136,6 +142,8 @@ func DebugEnableEnvKey(component string) string {
 		return DebugEnableVectorstoreLogsEnvKey
 	case ComponentEmbed:
 		return DebugEnableEmbedLogsEnvKey
+	case ComponentLLM:
+		return DebugEnableLLMLogsEnvKey
 	default:
 		return DebugEnableBrokerLogsEnvKey
 	}

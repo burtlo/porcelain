@@ -8,8 +8,8 @@ supervisor:
   log_json: true
   # Collector gate for ring buffer + /ui logs (independent of per-service emit levels).
   log_level: "info"
-  # Omit to launch every suite-enabled service (vectorstore, broker, gateway, indexer).
-  # services: [vectorstore, broker, gateway, indexer]
+  # Omit to launch every suite-enabled service (vectorstore, local_models, broker, gateway, indexer).
+  # services: [vectorstore, local_models, broker, gateway, indexer]
 
 gateway:
   enabled: true
@@ -138,3 +138,34 @@ mcp:
 #   model_path: "../data/embedding/models/nomic-embed-text.gguf"
 #   cache_dir: "../data/embedding/cache"
 #   log_level: "info"
+
+# Local chat models: one supervised chimera-llm + llama-server per entry (optional).
+#
+# Each enabled model is started before the broker and registered with it as a keyless
+# provider "local-<id>"; clients use the model id "local-<id>/<alias>". A model that
+# fails to load is reported on the supervisor /status but never stops the stack.
+# Thinking is off unless `thinking: true` (Qwen-style models otherwise spend most of
+# their tokens reasoning). extra_args are passed to llama-server verbatim.
+# Tuning notes and benchmarks: docs/features/local-chat-models.md
+# local_models:
+#   llama_server_bin: "../chimera/.deps/llama.cpp/llama-server.exe"  # default: -embed-backend-bin
+#   models_dir: "../data/models"     # base for relative model/mmproj paths
+#   models:
+#     - id: qwen35b                  # provider local-qwen35b
+#       endpoint: "127.0.0.1:8181"   # llama-server
+#       # listen: "127.0.0.1:7770"   # wrapper; default 7770 + index
+#       model: "Qwen3.6-35B-A3B-UD-IQ3_XXS.gguf"
+#       alias: "qwen3.6-35b-a3b"
+#       ctx_size: 65536
+#       n_gpu_layers: 99
+#       n_cpu_moe: 0                 # MoE experts kept on CPU; raise if VRAM overflows
+#       parallel: 1                  # one slot = fastest single-user generation
+#       extra_args: ["-fa", "on", "-t", "8", "-ctk", "q8_0", "-ctv", "q8_0", "-ub", "2048",
+#                    "--temp", "0.7", "--top-p", "0.8", "--top-k", "20", "--min-p", "0"]
+#     - id: qwen9b
+#       enabled: false               # keep configured, do not launch
+#       endpoint: "127.0.0.1:8180"
+#       model: "Qwen3.5-9B-Q4_K_M.gguf"
+#       mmproj: "mmproj-Qwen3.5-9B-BF16.gguf"
+#       alias: "qwen3.5-9b"
+#       ctx_size: 65536
